@@ -14,6 +14,5 @@ name = "intercom"
 path = "src/bin/intercom/main.rs"
 
 [dependencies]
-actix = "0.12.0"
 warp = "0.2.1"
 tokio = { version = "0.2", features = ["full"] }
