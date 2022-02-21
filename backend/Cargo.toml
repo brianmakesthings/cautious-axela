@@ -5,5 +5,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "server"
+path = "src/bin/web/main.rs"
+
+[[bin]]
+name = "intercom"
+path = "src/bin/intercom/main.rs"
+
 [dependencies]
-actix = "0.12.0"
+warp = "0.2.1"
+tokio = { version = "0.2", features = ["full"] }
