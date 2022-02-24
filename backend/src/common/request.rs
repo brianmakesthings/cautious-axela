@@ -198,5 +198,6 @@ mod tests {
         assert_eq!(response.get_id(), ID(0u128));
         assert_eq!(response.get_candidate(), &Data1(53));
         assert_eq!(response.get_result().unwrap(), ());
+        assert_eq!(data.0, Data1(53));
     }
 }
