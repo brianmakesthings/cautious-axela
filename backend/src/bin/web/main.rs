@@ -1,14 +1,15 @@
 use warp::{self, Filter};
 
 #[tokio::main]
-async fn main() { 
-
+async fn main() {
     let webpage = warp::get()
         .and(warp::path::end())
         .and(warp::fs::file("frontend/index.html"));
-  
+
     let public_files = warp::fs::dir("");
-    let routes = webpage.or(public_files).with(warp::log("warp::filters::fs"));
+    let routes = webpage
+        .or(public_files)
+        .with(warp::log("warp::filters::fs"));
 
     println!("Running at http://0.0.0.0:8000");
 
