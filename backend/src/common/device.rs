@@ -1,14 +1,12 @@
+use crate::{
+    message::{write_to_stream, Requests, ThreadReceiver, ThreadRequest},
+    request::{Error, Get, GetRequest, Set, SetRequest},
+};
 use serde::{Deserialize, Serialize};
 use std::io;
-use std::sync::mpsc;
-
-use crate::{
-    message::Channel,
-    request::{Error, Get, Set},
-};
 
 pub struct Terminal();
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Text(pub String);
 
 impl Set<Terminal, Text> for Terminal {
@@ -29,5 +27,21 @@ impl Get<Terminal, Text> for Terminal {
             Ok(_) => Ok(Text(string)),
             _ => Err(Error("Could not read from terminal".to_string())),
         }
+    }
+}
+
+impl Terminal {
+    fn process_command(&mut self, mut request: ThreadRequest) {
+        match request.0 {
+            Requests::TerminalGetText(x) => write_to_stream(&mut request.1, x.get_response(self)),
+            Requests::TerminalSetText(x) => write_to_stream(&mut request.1, x.get_response(self)),
+        }
+    }
+}
+
+pub fn driver(receiver: ThreadReceiver<ThreadRequest, Terminal>, mut terminal: Terminal) {
+    let rx = receiver.0;
+    for request in rx.iter() {
+        terminal.process_command(request);
     }
 }

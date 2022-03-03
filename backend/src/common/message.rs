@@ -1,73 +1,58 @@
 use crate::device::{Terminal, Text};
 use crate::request::*;
-use serde::{de::DeserializeOwned, Serialize};
-use serde_json;
-use std::io::Write;
-use std::net::{SocketAddrV4, TcpStream};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::io::{Read, Write};
+use std::marker::PhantomData;
+use std::net::TcpStream;
 use std::sync::mpsc;
 
-pub trait Receive<T> {
-    fn receive(self) -> Result<T, Error>
-    where
-        T: 'static + Send + DeserializeOwned;
-}
+pub struct ThreadSender<Type, To>(pub mpsc::Sender<Type>, pub PhantomData<To>);
 
-pub struct Channel<T>(pub mpsc::Receiver<T>);
-
-impl<T> Receive<T> for Channel<T> {
-    fn receive(self) -> Result<T, Error>
-    where
-        T: 'static + Send + DeserializeOwned,
-    {
-        let result = self.0.try_recv();
-        match result {
-            Ok(x) => Ok(x),
-            Err(mpsc::TryRecvError::Empty) => Err(Error("Empty".to_string())),
-            _ => panic!("Thread disconnected"),
-        }
+impl<Type, To> Clone for ThreadSender<Type, To> {
+    fn clone(&self) -> ThreadSender<Type, To> {
+        ThreadSender(self.0.clone(), PhantomData)
     }
 }
 
-pub trait Route<T> {
-    fn send(self, target: T) -> Result<(), Error>
-    where
-        T: Serialize + Send + 'static;
+pub struct ThreadReceiver<Type, From>(pub mpsc::Receiver<Type>, pub PhantomData<From>);
+
+#[derive(Serialize, Deserialize)]
+pub enum Requests {
+    TerminalGetText(BasicGetRequest<Terminal, Text>),
+    TerminalSetText(BasicSetRequest<Terminal, Text>),
 }
 
-pub struct TCPRoute(SocketAddrV4);
-
-impl<T> Route<T> for TCPRoute {
-    fn send(self, target: T) -> Result<(), Error>
-    where
-        T: Serialize + Send + 'static,
-    {
-        let stream = TcpStream::connect(self.0);
-        if let Err(_) = stream {
-            return Err(Error("Could not connect to TCP stream".to_string()));
-        }
-        let mut stream = stream.unwrap();
-        tokio::spawn(async move {
-            let json = match serde_json::to_string(&target) {
-                Ok(x) => x,
-                Err(error) => panic!("Cannot convert into Json {0}", error),
-            };
-            match stream.write_all(json.as_bytes()) {
-                Ok(_) => (),
-                Err(_) => panic!("Cannot send Json over TCP"),
-            };
-        });
-        Ok(())
-    }
+#[derive(Serialize, Deserialize)]
+pub enum Responses {
+    TerminalGetText(BasicGetResponse<Terminal, Text>),
+    TerminalSetText(BasicSetResponse<Terminal, Text>),
 }
 
-pub struct Message<T, R>(T, R);
+pub struct ThreadRequest(pub Requests, pub TcpStream);
 
-pub enum Requests<T> {
-    TerminalGetText(Message<T, BasicGetRequest<Terminal, Text>>),
-    TerminalSetText(Message<T, BasicSetRequest<Terminal, Text>>),
+pub fn read_from_stream<T>(stream: &mut TcpStream) -> T
+where
+    T: DeserializeOwned,
+{
+    let mut len_buf = [0u8; 8];
+    stream.read_exact(&mut len_buf).unwrap();
+    let len: u64 = u64::from_le_bytes(len_buf);
+    let mut buf = vec![0u8; usize::try_from(len).unwrap()];
+    stream.read_exact(&mut buf[..]).unwrap();
+    let json = String::from_utf8(buf).unwrap();
+    let return_value: T = serde_json::from_str(&json).unwrap();
+    return_value
 }
 
-pub enum Responses<T> {
-    TerminalGetText(Message<T, BasicGetResponse<Terminal, Text>>),
-    TerminalSetText(Message<T, BasicSetResponse<Terminal, Text>>),
+pub fn write_to_stream<T>(stream: &mut TcpStream, target: T)
+where
+    T: Serialize,
+{
+    let json = serde_json::to_string(&target).unwrap();
+    let bytes = json.as_bytes();
+    stream
+        .write_all(&(bytes.len() as u64).to_le_bytes())
+        .unwrap();
+    stream.write_all(bytes).unwrap();
+    stream.flush().unwrap();
 }
