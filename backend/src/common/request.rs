@@ -1,3 +1,4 @@
+/// Base request/response structures.
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 

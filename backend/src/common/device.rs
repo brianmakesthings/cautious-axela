@@ -1,47 +1,38 @@
-use crate::{
-    message::{write_to_stream, Requests, ThreadReceiver, ThreadRequest},
-    request::{Error, Get, GetRequest, Set, SetRequest},
+pub mod terminal;
+
+use crate::message::{Receive, Send};
+use std::{
+    marker,
+    thread::{self, JoinHandle},
+    time::Duration,
 };
-use serde::{Deserialize, Serialize};
-use std::io;
 
-pub struct Terminal();
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Text(pub String);
-
-impl Set<Terminal, Text> for Terminal {
-    fn set(&mut self, target: &Text) -> Result<(), Error> {
-        println!("{}", target.0);
-        Ok(())
-    }
+pub fn launch_device<T, U>(device: impl Device<T, U>) -> JoinHandle<()> {
+    thread::spawn(move || {
+        device.run();
+    })
 }
 
-// Blocking
-impl Get<Terminal, Text> for Terminal {
-    fn get(&self) -> Result<Text, Error> {
-        let stdin = io::stdin();
-        let mut string = String::new();
-        let result = stdin.read_line(&mut string);
-        match result {
-            Ok(0) => Ok(Text("".to_string())),
-            Ok(_) => Ok(Text(string)),
-            _ => Err(Error("Could not read from terminal".to_string())),
+pub struct Shutdown(pub bool);
+
+pub trait Device<T, U>: Receive<T> + Send<U> + Sized + marker::Send + 'static {
+    fn handle_command(&mut self, request: T) -> Shutdown;
+    fn get_sleep_duration(&self) -> Option<Duration>;
+    fn step(&mut self);
+    fn run(mut self) {
+        loop {
+            let received_message = Self::receive(&mut self);
+            if let Ok(msg) = received_message {
+                let shutdown = self.handle_command(msg);
+                if shutdown.0 {
+                    break;
+                };
+            }
+            self.step();
+            match self.get_sleep_duration() {
+                Some(duration) => std::thread::sleep(duration),
+                _ => (),
+            }
         }
-    }
-}
-
-impl Terminal {
-    fn process_command(&mut self, mut request: ThreadRequest) {
-        match request.0 {
-            Requests::TerminalGetText(x) => write_to_stream(&mut request.1, x.get_response(self)),
-            Requests::TerminalSetText(x) => write_to_stream(&mut request.1, x.get_response(self)),
-        }
-    }
-}
-
-pub fn driver(receiver: ThreadReceiver<ThreadRequest, Terminal>, mut terminal: Terminal) {
-    let rx = receiver.0;
-    for request in rx.iter() {
-        terminal.process_command(request);
     }
 }

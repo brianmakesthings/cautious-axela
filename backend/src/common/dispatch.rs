@@ -1,6 +1,6 @@
-use crate::device::Terminal;
-use crate::message;
-use crate::message::*;
+use crate::device::terminal::Terminal;
+use crate::message::{read_from_stream, ThreadSender};
+use crate::requests_and_responses::{Requests, ThreadRequest};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 
@@ -38,7 +38,7 @@ pub fn start_server(dispatcher: Dispatcher, listener: TcpListener) {
         {
             let dispatcher = dispatcher.clone();
             thread::spawn(move || {
-                let request = message::read_from_stream::<Requests>(&mut stream);
+                let request = read_from_stream(&mut stream).unwrap();
                 dispatcher.dispatch(request, stream);
             });
         }
