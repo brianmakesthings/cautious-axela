@@ -4,19 +4,29 @@
 
 <head>
 	<title>Cautious Axela</title>
-	<link rel="stylesheet" href="frontend/stylesheets/style.css" type="text/css"/>
+	<link rel="stylesheet" href="./stylesheets/style.css" type="text/css"/>
 </head>
 
 	<body>
 		<div class="title">
 			<h1>Cautious Axela</h1>
 		</div>
-		<form action="" class="intercom-buttons">
+		<form action="" class="intercom-controls">
 			
-			<div id="camera">Camera</div>
-			<div id="microphone">Microphone</div>
-			<div id="lock">Lock</div>
+			<h2>Door</h2>
+			<input type="button" id="lock" onclick="setDoor('lock')" value="Lock">
+			<input type="button" id="lock" onclick="setDoor('unlock')" value="unLock">
+
+			<h2>Camera</h2>
+			<input type="button" id="camera" onclick="setCamera('on')" value="On">
+			<input type="button" id="camera" onclick="setCamera('off')" value="Off">
+			
+			<h2>Audio</h2>
+			<input type="button" id="microphone" onclick="setAudio('on')" value="On">
+			<input type="button" id="microphone" onclick="setAudio('off')" value="Off">
 			
 		</form>
+
+		<script src='../backend/src/bin/web/web_ui.rs' type='text/rs'></script>
 	</body>
 </html>

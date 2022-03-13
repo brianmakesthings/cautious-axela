@@ -1,12 +1,13 @@
 body{
 	background-color: #131517;
-	color: white;
+	color: rgb(216, 214, 214);
 	font-family: sans-serif;
 }
 
 #camera, #microphone, #lock{
-	padding: 15px 50px;
-	width: 100px;
+	/* padding: 15px 50px; */
+	width: 80px;
+	/* margin-right: 50px; */
 	font-size: large;
 }
 
@@ -15,5 +16,20 @@ body{
 }
 
 .title{
-	padding: 20px 50px;
+	padding: 20px 50px 0 50px;
+}
+
+.intercom-controls{
+	padding: 20px 50px;	
+}
+
+h2{
+	margin: 30px 0 15px 0;
+}
+
+input{
+	color: rgb(163, 160, 160);
+	border: none;
+	background-color: transparent;
+	cursor:pointer;
 }
