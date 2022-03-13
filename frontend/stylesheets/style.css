@@ -5,7 +5,9 @@ body{
 }
 
 #camera, #microphone, #lock{
+	/* padding: 15px 50px; */
 	width: 80px;
+	/* margin-right: 50px; */
 	font-size: large;
 }
 
@@ -30,9 +32,4 @@ input{
 	border: none;
 	background-color: transparent;
 	cursor:pointer;
-}
-
-video {
-  /* for visibility in testing*/
-  border: #FFFFFF solid;
 }
