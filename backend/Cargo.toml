@@ -18,7 +18,11 @@ name = "intercom"
 path = "src/bin/intercom/main.rs"
 
 [dependencies]
-warp = "0.2.1"
-tokio = { version = "0.2", features = ["full"] }
+futures = { version = "0.3", default-features = false }
+warp = "0.3.2"
+tokio = { version = "1.17.0", features = ["full"] }
+tokio-stream = "0.1.6"
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
+uuid = { version = "*", features = ["v4"] }
+nokhwa = { version = "*", features = ["input-v4l"] }
