@@ -12,7 +12,7 @@ pub enum Requests {
     TerminalSetText(BasicSetRequest<Terminal, Text>),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum Responses {
     TerminalGetText(BasicGetResponse<Terminal, Text>),
     TerminalSetText(BasicSetResponse<Terminal, Text>),
