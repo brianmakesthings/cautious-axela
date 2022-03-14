@@ -49,15 +49,3 @@ input {
 .intercom-controls > button:hover {
   color: #fd6261;
 }
-
-.intercom-controls > button {
-  color: rgb(163, 160, 160);
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: large;
-}
-
-.intercom-controls > button:hover {
-  color: #fd6261;
-}
