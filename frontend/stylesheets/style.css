@@ -49,3 +49,8 @@ input {
 .intercom-controls > button:hover {
   color: #fd6261;
 }
+
+video {
+  /* for visibility in testing*/
+  border: #FFFFFF solid;
+}
