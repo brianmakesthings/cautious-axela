@@ -11,23 +11,22 @@
 		<div class="title">
 			<h1>Cautious Axela</h1>
 		</div>
-
-		<button id="btn_ping">Ping</button>
-
-		<div class="intercom-controls">
+		<form action="" class="intercom-controls">
+			
 			<h2>Door</h2>
-			<button id="btn_lock">Lock</button>
-			<button id="btn_unlock">Unlock</button>
+			<input type="button" id="lock" onclick="setDoor('lock')" value="Lock">
+			<input type="button" id="lock" onclick="setDoor('unlock')" value="unLock">
 
 			<h2>Camera</h2>
-			<input type="button" id="camera" value="On">
-			<input type="button" id="camera" value="Off">
+			<input type="button" id="camera" onclick="setCamera('on')" value="On">
+			<input type="button" id="camera" onclick="setCamera('off')" value="Off">
 			
 			<h2>Audio</h2>
-			<input type="button" id="microphone" value="On">
-			<input type="button" id="microphone" value="Off">
+			<input type="button" id="microphone" onclick="setAudio('on')" value="On">
+			<input type="button" id="microphone" onclick="setAudio('off')" value="Off">
+			
 		</form>
 
-		<script src='js/index.js' type='text/javascript'></script>
+		<script src='../backend/src/bin/web/web_ui.rs' type='text/rs'></script>
 	</body>
 </html>
