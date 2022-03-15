@@ -3,11 +3,16 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use warp::filters::ws::Message;
 
-pub type Clients =
-    Arc<Mutex<HashMap<String, mpsc::UnboundedSender<std::result::Result<Message, warp::Error>>>>>;
+pub struct Client {
+    pub id: String,
+    pub ws: mpsc::UnboundedSender<std::result::Result<Message, warp::Error>>,
+    pub rtc: Option<mpsc::Sender<()>>,
+}
+
+pub type Clients = Arc<Mutex<HashMap<String, Client>>>;
 
 pub async fn broadcast(clients: Clients, msg: Message) {
-    for sender in clients.lock().await.values() {
-        sender.send(Ok(msg.clone())).unwrap();
+    for client in clients.lock().await.values() {
+        client.ws.send(Ok(msg.clone())).unwrap();
     }
 }
