@@ -12,4 +12,4 @@
 const video = document.getElementById('video');
 let stream = null;
 // TODO: connect to stream;
-rightVideo.srcObject = stream;
+video.srcObject = stream;
