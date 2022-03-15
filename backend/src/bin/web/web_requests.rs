@@ -22,7 +22,7 @@ impl WebRequests {
 
 // request from web
 #[derive(Deserialize, Debug)]
-pub struct WsRequest {
+pub struct WebSocketRequest {
     pub id: String,
     pub command: String,
     pub message: String,
