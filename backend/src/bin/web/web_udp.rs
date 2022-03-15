@@ -23,10 +23,8 @@ pub fn mainloop(clients: Clients) -> std::thread::JoinHandle<()> {
     let socket = init("0.0.0.0:8001");
 
     thread::spawn(move || loop {
-        loop {
-            let len = recv(&socket, &mut buf);
-            let fut = broadcast(clients.clone(), Message::text("{\"message\": \"test\"}"));
-            Runtime::new().unwrap().block_on(fut);
-        }
+        let _len = recv(&socket, &mut buf);
+        let fut = broadcast(clients.clone(), Message::text("{\"message\": \"test\"}"));
+        Runtime::new().unwrap().block_on(fut);
     })
 }
