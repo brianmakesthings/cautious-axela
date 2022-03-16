@@ -35,19 +35,17 @@ pc.oniceconnectionstatechange = e => { console.log(e, pc.iceConnectionState) }
 pc.onicecandidate = event => {
   if (event.candidate === null) {
     send("RtcSession", JSON.stringify(pc.localDescription), e => {
-      console.log(e)
-      //try {
-      //  pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(sd)))
-      //} catch (e) {
-      //  alert(e)
-      //}
+      try {
+        pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(e.response)))
+      } catch (e) {
+        alert(e)
+      }
     })
   }
 }
 
 // Offer to receive 1 audio, and 2 video tracks
 pc.addTransceiver("audio", { "direction": "recvonly" })
-pc.addTransceiver("video", { "direction": "recvonly" })
 pc.addTransceiver("video", { "direction": "recvonly" })
 
 console.log("ws", "connecting")
