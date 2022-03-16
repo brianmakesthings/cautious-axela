@@ -2,13 +2,13 @@
 
 DEPLOY_PATH= $(HOME)/cmpt433/public/myApps/server-copy
 
-all: build compile
+all: compile
 
 build:
 	docker build . -t cautious-axela
 	docker create --name cautious-axela -v $(PWD):/readonly/ cautious-axela
 
-compile:
+compile: build
 	docker start -a cautious-axela
 	mkdir -p $(DEPLOY_PATH)
 	chmod a+rwx $(DEPLOY_PATH)
