@@ -101,6 +101,7 @@ async fn handle_ws_client(websocket: warp::ws::WebSocket, clients: Clients) {
             id: uuid.clone(),
             ws: ws_sender,
             rtc: None,
+            video_track: None,
         },
     );
 
@@ -174,6 +175,8 @@ async fn start_rtc(req: WsRequest, client: &mut Client) {
         "video".to_owned(),
         "webrtc-rs".to_owned(),
     ));
+
+    client.video_track = Some(Arc::clone(&video_track));
 
     // Add this newly created track to the PeerConnection
     let rtp_sender = peer_connection
