@@ -1,8 +1,6 @@
-use std::thread;
-use std::net::{TcpListener, TcpStream};
+use std::net::{TcpStream};
 use std::marker::PhantomData;
 use std::process;
-use std::sync::mpsc::Sender;
 use common::message::{read_from_stream, write_to_stream};
 use common::device::terminal::{Terminal, Text};
 use common::requests_and_responses::{Requests, Responses};
@@ -117,7 +115,7 @@ pub fn match_intercom_response(response: Responses, id: u128) -> String{
 
 // call from client_msg() in main 
 // relays message from web to intercom
-pub fn listen_for_web(request: WebSocketRequest) -> String{
+pub async fn listen_for_web(request: WebSocketRequest) -> String{
 
 	let new_request = WebRequests(DeviceCommand(request.command), Message(request.message));
 
@@ -126,16 +124,17 @@ pub fn listen_for_web(request: WebSocketRequest) -> String{
 	let (setrequest, id): (Requests, u128) = Commands::set_command(&command, request_command);
 
 	// send command to intercom and get reply
-	let response = send_command_to_intercom(setrequest);
+	let response = send_command_to_intercom(setrequest).await;
 	let reply_to_web = match_intercom_response(response, id);
 
 	reply_to_web
 
 }
 
-fn send_command_to_intercom(request: Requests) -> Responses {
 
-	let message = thread::spawn(move || {
+async fn send_command_to_intercom(request: Requests) -> Responses {
+
+	let message = tokio::task::spawn(async move {
 		
 		match TcpStream::connect("127.0.0.1:2000") {
 
@@ -152,67 +151,26 @@ fn send_command_to_intercom(request: Requests) -> Responses {
 				process::exit(1);
 			}
 		}
-	});	
+	}).await.unwrap();
 
-	let result = message.join().unwrap();
-	result
+	message
+
 }
 
 
 
-
-
-
-
-
-
-
-
-
-// listens for messages from intercom and relays to web
-pub fn listen_for_intercom(sender: Sender<String>) {
-
-	let listener = TcpListener::bind("127.0.0.1:8001").unwrap();
-	println!("Server listening on 127.0.0.1:8001");
-
-	std::thread::spawn(move || {
-		web_to_intercom_message();
-	});
-
-	for stream in listener.incoming() {	
-
-		if let Err(_) = stream {
-            continue;
-        }
-
-		let tx = sender.clone();
-
-		thread::spawn(move || {
-	
-			let mut stream = stream.unwrap();
-			// get message from intercom
-			let request = read_from_stream(&mut stream).unwrap();
-			
-			// send message to web 
-			tx.send(request).unwrap();
-		
-		});
-	} 
-    
-    drop(listener);
-}
 
 
 // test 
 #[allow(dead_code)]
-fn web_to_intercom_message(){
+async fn web_to_intercom_message(){
 
 	let request_get = WebSocketRequest{id: "1".to_string(), command: "terminalget".to_string(), message: "terminal".to_string()};
-	let reply_get = listen_for_web(request_get);
+	let reply_get = listen_for_web(request_get).await;
 	println!("reply: {}", reply_get);
 
 	let request_set = WebSocketRequest{id: "2".to_string(), command: "terminalset".to_string(), message: "terminal".to_string()};
-	let reply_set = listen_for_web(request_set);
+	let reply_set = listen_for_web(request_set).await;
 	println!("reply2: {}", reply_set);
 }
 
