@@ -13,7 +13,8 @@ use warp::filters::ws::Message;
 use warp::{self, Filter};
 use web_ws::{Client, Clients};
 use webrtc::api::interceptor_registry::register_default_interceptors;
-use webrtc::api::media_engine::{MediaEngine, MIME_TYPE_VP8};
+use webrtc::api::media_engine;
+use webrtc::api::media_engine::MediaEngine;
 use webrtc::api::APIBuilder;
 use webrtc::ice_transport::ice_connection_state::RTCIceConnectionState;
 use webrtc::ice_transport::ice_server::RTCIceServer;
@@ -51,28 +52,38 @@ struct WsResult {
 async fn main() {
     let clients: Clients = Arc::new(Mutex::new(HashMap::new()));
 
-    let rtc_server_handle = web_rtp::mainloop(clients.clone());
+    let video_track = Arc::new(TrackLocalStaticRTP::new(
+        RTCRtpCodecCapability {
+            mime_type: media_engine::MIME_TYPE_VP8.to_owned(),
+            ..Default::default()
+        },
+        "video".to_owned(),
+        "webrtc-rs".to_owned(),
+    ));
+
+    let rtc_server_handle = web_rtp::mainloop(video_track.clone());
 
     let ws = warp::path("socket")
         .and(warp::ws())
         .and(with_clients(clients.clone()))
-        .map(|ws: warp::ws::Ws, clients: Clients| {
-            ws.on_upgrade(move |socket| handle_ws_client(socket, clients))
+        .and(with_video_track(video_track.clone()))
+        .map(|ws: warp::ws::Ws, clients: Clients, video_track: Arc<_>| {
+            ws.on_upgrade(move |socket| handle_ws_client(socket, clients, video_track))
         });
 
     let webpage = warp::get()
         .and(warp::path::end())
-        .and(warp::fs::file("./frontend/index.html"));
+        .and(warp::fs::file("../frontend/index.html"));
 
-    let public_files = warp::fs::dir("./frontend");
+    let public_files = warp::fs::dir("../frontend");
     let routes = webpage
         .or(ws)
         .or(public_files)
         .with(warp::log("warp::filters::fs"));
 
-    println!("Running at http://0.0.0.0:8000");
+    println!("Running at http://0.0.0.0:5000");
 
-    warp::serve(routes).run(([0, 0, 0, 0], 8000)).await;
+    warp::serve(routes).run(([0, 0, 0, 0], 5000)).await;
 
     rtc_server_handle.join().unwrap();
 }
@@ -81,7 +92,17 @@ fn with_clients(clients: Clients) -> impl Filter<Extract = (Clients,), Error = I
     warp::any().map(move || clients.clone())
 }
 
-async fn handle_ws_client(websocket: warp::ws::WebSocket, clients: Clients) {
+fn with_video_track(
+    video_track: Arc<TrackLocalStaticRTP>,
+) -> impl Filter<Extract = (Arc<TrackLocalStaticRTP>,), Error = Infallible> + Clone {
+    warp::any().map(move || video_track.clone())
+}
+
+async fn handle_ws_client(
+    websocket: warp::ws::WebSocket,
+    clients: Clients,
+    video_track: Arc<TrackLocalStaticRTP>,
+) {
     let (sender, mut receiver) = websocket.split();
     let (ws_sender, client_rcv) = mpsc::unbounded_channel();
 
@@ -100,8 +121,6 @@ async fn handle_ws_client(websocket: warp::ws::WebSocket, clients: Clients) {
         Client {
             id: uuid.clone(),
             ws: ws_sender,
-            rtc: None,
-            video_track: None,
         },
     );
 
@@ -115,7 +134,7 @@ async fn handle_ws_client(websocket: warp::ws::WebSocket, clients: Clients) {
             }
         };
 
-        client_msg(&uuid, msg, &clients).await;
+        client_msg(&uuid, msg, &clients, video_track.clone()).await;
     }
 
     clients.lock().await.remove(&uuid);
@@ -132,12 +151,9 @@ fn reply(req: WsRequest, client: &Client, msg: String) {
 }
 
 // https://github.com/webrtc-rs/examples/tree/main/examples/rtp-to-webrtc
-async fn start_rtc(req: WsRequest, client: &mut Client) {
+async fn start_rtc(req: WsRequest, client: &mut Client, video_track: Arc<TrackLocalStaticRTP>) {
+    println!("Starting rtc with client {}", client.id);
     let mut m = MediaEngine::default();
-
-    let (rtc_sender, _done_rx) = tokio::sync::mpsc::channel::<()>(1);
-    client.rtc = Some(rtc_sender.clone());
-
     m.register_default_codecs().unwrap();
 
     // Create a InterceptorRegistry. This is the user configurable RTP/RTCP Pipeline.
@@ -166,19 +182,6 @@ async fn start_rtc(req: WsRequest, client: &mut Client) {
     // Create a new RTCPeerConnection
     let peer_connection = Arc::new(api.new_peer_connection(config).await.unwrap());
 
-    // Create Track that we send video back to browser on
-    let video_track = Arc::new(TrackLocalStaticRTP::new(
-        RTCRtpCodecCapability {
-            mime_type: MIME_TYPE_VP8.to_owned(),
-            ..Default::default()
-        },
-        "video".to_owned(),
-        "webrtc-rs".to_owned(),
-    ));
-
-    client.video_track = Some(Arc::clone(&video_track));
-
-    // Add this newly created track to the PeerConnection
     let rtp_sender = peer_connection
         .add_track(Arc::clone(&video_track) as Arc<dyn TrackLocal + Send + Sync>)
         .await
@@ -193,20 +196,18 @@ async fn start_rtc(req: WsRequest, client: &mut Client) {
         Result::<()>::Ok(())
     });
 
-    let done_tx1 = rtc_sender.clone();
     // Set the handler for ICE connection state
     // This will notify you when the peer has connected/disconnected
     peer_connection
         .on_ice_connection_state_change(Box::new(move |connection_state: RTCIceConnectionState| {
             println!("Connection State has changed {}", connection_state);
             if connection_state == RTCIceConnectionState::Failed {
-                let _ = done_tx1.try_send(());
+                println!("Ice Connection failed");
             }
             Box::pin(async {})
         }))
         .await;
 
-    let done_tx2 = rtc_sender.clone();
     // Set the handler for Peer connection state
     // This will notify you when the peer has connected/disconnected
     peer_connection
@@ -214,11 +215,7 @@ async fn start_rtc(req: WsRequest, client: &mut Client) {
             println!("Peer Connection State has changed: {}", s);
 
             if s == RTCPeerConnectionState::Failed {
-                // Wait until PeerConnection has had no network activity for 30 seconds or another failure. It may be reconnected using an ICE Restart.
-                // Use webrtc.PeerConnectionStateDisconnected if you are interested in detecting faster timeout.
-                // Note that the PeerConnection may come back from PeerConnectionStateDisconnected.
                 println!("Peer Connection has gone to failed exiting: Done forwarding");
-                let _ = done_tx2.try_send(());
             }
 
             Box::pin(async {})
@@ -254,7 +251,12 @@ async fn start_rtc(req: WsRequest, client: &mut Client) {
     }
 }
 
-async fn client_msg(client_id: &str, msg: Message, clients: &Clients) {
+async fn client_msg(
+    client_id: &str,
+    msg: Message,
+    clients: &Clients,
+    video_track: Arc<TrackLocalStaticRTP>,
+) {
     let message = match msg.to_str() {
         Ok(v) => v,
         Err(_) => return,
@@ -262,7 +264,6 @@ async fn client_msg(client_id: &str, msg: Message, clients: &Clients) {
 
     match clients.lock().await.get_mut(client_id) {
         Some(client) => {
-            println!("{}", message);
             let req: WsRequest = match from_str(message) {
                 Ok(req) => req,
                 Err(e) => {
@@ -272,11 +273,9 @@ async fn client_msg(client_id: &str, msg: Message, clients: &Clients) {
             };
 
             match req.command {
-                Command::Ping => {
-                    reply(req, client, "pong".to_string());
-                }
+                Command::Ping => reply(req, client, "pong".to_string()),
                 Command::Lock => {}
-                Command::RtcSession => start_rtc(req, client).await,
+                Command::RtcSession => start_rtc(req, client, video_track).await,
             }
         }
         None => return,

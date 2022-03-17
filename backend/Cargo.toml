@@ -29,3 +29,6 @@ webrtc = "0.4.0"
 anyhow = "1.0.52"
 chrono = "0.4.19"
 log = "0.4.14"
+
+[patch.crates-io]
+rcgen = { git = "https://github.com/wwww-wwww/rcgen", branch = "32bit" }
