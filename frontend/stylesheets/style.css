@@ -1,0 +1,19 @@
+body{
+	background-color: #131517;
+	color: white;
+	font-family: sans-serif;
+}
+
+#camera, #microphone, #lock{
+	padding: 15px 50px;
+	width: 100px;
+	font-size: large;
+}
+
+#camera:hover, #microphone:hover, #lock:hover{
+	color: #fd6261;
+}
+
+.title{
+	padding: 20px 50px;
+}
