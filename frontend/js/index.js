@@ -50,7 +50,6 @@ pc.addTransceiver("video", { "direction": "recvonly" })
 
 console.log("ws", "connecting")
 socket.addEventListener("open", ev => {
-
   pc.createOffer()
     .then(d => pc.setLocalDescription(d))
     .catch((err) => {
