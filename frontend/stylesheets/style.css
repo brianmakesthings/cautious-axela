@@ -31,3 +31,8 @@ input{
 	background-color: transparent;
 	cursor:pointer;
 }
+
+video {
+  /* for visibility in testing*/
+  border: #FFFFFF solid;
+}
