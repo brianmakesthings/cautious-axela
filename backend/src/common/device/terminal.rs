@@ -61,8 +61,9 @@ impl TerminalDevice {
     }
 }
 
+#[derive(Clone)]
 pub struct Terminal();
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Text(pub String);
 
 impl Set<Terminal, Text> for Terminal {
