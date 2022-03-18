@@ -1,10 +1,13 @@
 use warp::{self, Filter};
+mod web_relay;
+mod web_requests;
 
 #[tokio::main]
 async fn main() {
+
     let webpage = warp::get()
         .and(warp::path::end())
-        .and(warp::fs::file("frontend/index.html"));
+        .and(warp::fs::file("./index.html"));
 
     let public_files = warp::fs::dir("");
     let routes = webpage
