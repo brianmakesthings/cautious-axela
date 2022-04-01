@@ -12,6 +12,7 @@ all:
 
 	cargo build --release --target armv7-unknown-linux-musleabihf
 	cp ./target/armv7-unknown-linux-musleabihf/release/server $(DEPLOY_PATH)
+	cp ./target/armv7-unknown-linux-musleabihf/release/intercom $(DEPLOY_PATH)
 
 clean:
 	cargo clean

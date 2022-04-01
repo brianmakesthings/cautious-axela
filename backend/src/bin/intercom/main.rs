@@ -13,6 +13,7 @@ fn main() {
 
     // Start server
     let listener = TcpListener::bind("127.0.0.1:2000").unwrap();
+    println!("Listening on 192.168.7.2:2000");
     let dispatch_handle = thread::spawn(|| {
         dispatch::start_server(dispatcher, listener);
     });
