@@ -24,7 +24,14 @@ impl WebRequests {
 #[derive(Deserialize, Debug)]
 pub struct WebSocketRequest {
     pub id: String,
-    pub command: String,
+    pub command: Command,
     pub message: String,
 }
 
+
+#[derive(Deserialize, Debug)]
+pub enum Command {
+    RtcSession,
+    Lock,
+    Ping,
+}
