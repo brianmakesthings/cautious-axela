@@ -11,6 +11,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 use warp::filters::ws::Message;
 use warp::{self, Filter};
+use web_requests::{Command, WebSocketRequest};
 use web_ws::{Client, Clients};
 use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine;
@@ -25,22 +26,9 @@ use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::rtp_transceiver::rtp_codec::RTCRtpCodecCapability;
 use webrtc::track::track_local::track_local_static_rtp::TrackLocalStaticRTP;
 use webrtc::track::track_local::TrackLocal;
+mod web_requests;
 mod web_rtp;
 mod web_ws;
-
-#[derive(Deserialize, Debug)]
-enum Command {
-    RtcSession,
-    Lock,
-    Ping,
-}
-
-#[derive(Deserialize, Debug)]
-struct WsRequest {
-    id: String,
-    command: Command,
-    message: String,
-}
 
 #[derive(Serialize, Debug)]
 struct WsResult {
@@ -73,9 +61,9 @@ async fn main() {
 
     let webpage = warp::get()
         .and(warp::path::end())
-        .and(warp::fs::file("../frontend/index.html"));
+        .and(warp::fs::file("frontend/index.html"));
 
-    let public_files = warp::fs::dir("../frontend");
+    let public_files = warp::fs::dir("frontend");
     let routes = webpage
         .or(ws)
         .or(public_files)
@@ -141,7 +129,7 @@ async fn handle_ws_client(
     println!("ws disconnected");
 }
 
-fn reply(req: WsRequest, client: &Client, msg: String) {
+fn reply(req: WebSocketRequest, client: &Client, msg: String) {
     let response = serde_json::to_string(&WsResult {
         id: req.id,
         response: msg,
@@ -151,7 +139,11 @@ fn reply(req: WsRequest, client: &Client, msg: String) {
 }
 
 // https://github.com/webrtc-rs/examples/tree/main/examples/rtp-to-webrtc
-async fn start_rtc(req: WsRequest, client: &mut Client, video_track: Arc<TrackLocalStaticRTP>) {
+async fn start_rtc(
+    req: WebSocketRequest,
+    client: &mut Client,
+    video_track: Arc<TrackLocalStaticRTP>,
+) {
     println!("Starting rtc with client {}", client.id);
     let mut m = MediaEngine::default();
     m.register_default_codecs().unwrap();
@@ -264,7 +256,7 @@ async fn client_msg(
 
     match clients.lock().await.get_mut(client_id) {
         Some(client) => {
-            let req: WsRequest = match from_str(message) {
+            let req: WebSocketRequest = match from_str(message) {
                 Ok(req) => req,
                 Err(e) => {
                     println!("error parsing request: {}", e);
