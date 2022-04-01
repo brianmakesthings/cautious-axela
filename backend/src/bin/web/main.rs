@@ -11,7 +11,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 use warp::filters::ws::Message;
 use warp::{self, Filter};
-use web_requests::{Command, WebSocketRequest};
+use web_requests::{Commands, WebSocketRequest};
 use web_ws::{Client, Clients};
 use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine;
@@ -265,9 +265,12 @@ async fn client_msg(
             };
 
             match req.command {
-                Command::Ping => reply(req, client, "pong".to_string()),
-                Command::Lock => {}
-                Command::RtcSession => start_rtc(req, client, video_track).await,
+                Commands::Ping => reply(req, client, "pong".to_string()),
+                Commands::Lock => {}
+                Commands::RtcSession => start_rtc(req, client, video_track).await,
+                _ => {
+                    println!("unhandled command: {}", msg.to_str().unwrap());
+                }
             }
         }
         None => return,
