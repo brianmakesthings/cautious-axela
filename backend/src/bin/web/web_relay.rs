@@ -174,17 +174,3 @@ async fn web_to_intercom_message(){
 	println!("reply2: {}", reply_set);
 }
 
-
-// test 
-#[allow(dead_code)]
-fn web_to_intercom_message(){
-
-	let request_get = WsRequest{id: "1".to_string(), command: "terminalget".to_string(), message: "terminal".to_string()};
-	let reply_get = listen_for_web(request_get);
-	println!("reply: {}", reply_get);
-
-	let request_set = WsRequest{id: "2".to_string(), command: "terminalset".to_string(), message: "terminal".to_string()};
-	let reply_set = listen_for_web(request_set);
-	println!("reply2: {}", reply_set);
-}
-
