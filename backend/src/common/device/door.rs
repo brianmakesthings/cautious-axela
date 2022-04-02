@@ -6,24 +6,31 @@ use crate::message::{Receive, Send, TcpSender, ThreadReceiver};
 use crate::request::{Error, Get, GetRequest, Set, SetRequest};
 use crate::requests_and_responses::{Requests, Responses, ThreadRequest};
 use serde::{Deserialize, Serialize};
-use std::io;
 use std::time::Duration;
 
-use sysfs_gpio::{Pin, Direction};
+use sysfs_gpio::{Pin};
 
-const pin:u64 = 48;
+pub const PIN_NUMBER: u64 = 48;
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum DoorState {
     Lock,
     Unlock,
+}
+
+impl DoorState {
+    fn state_to_pin_value(&self) -> u8 {
+        match &self {
+            DoorState::Lock => 0,
+            DoorState::Unlock => 1,
+        }
+    }
 }
 
 pub struct DoorDevice {
     sender: TcpSender<Responses>,
     receiver: ThreadReceiver<ThreadRequest, Dispatcher>,
     door: Door,
-    pin: Pin,
-    state: DoorState,
 }
 
 impl Send<Responses> for DoorDevice {
@@ -43,18 +50,18 @@ impl Device<ThreadRequest, Responses> for DoorDevice {
         let ThreadRequest(request, stream) = request;
         self.sender.set_stream(stream);
         match request {
-            Requests::TerminalGetText(x) => self
+            Requests::DoorGetState(x) => self
                 .sender
-                .send(Responses::TerminalGetText(x.get_response(&self.terminal))),
-
-            Requests::TerminalSetText(x) => self.sender.send(Responses::TerminalSetText(
-                x.get_response(&mut self.terminal),
+                .send(Responses::DoorGetState(x.get_response(&self.door))),
+            Requests::DoorSetState(x) => self.sender.send(Responses::DoorSetState(
+                x.get_response(&mut self.door),
             )),
+            _ => panic!("Door device received invalid request"),
         }
         Shutdown(false)
     }
     fn get_sleep_duration(&self) -> Option<Duration> {
-        Some(Duration::from_millis(250))
+        Some(Duration::from_millis(500))
     }
     fn step(&mut self) {}
 }
@@ -65,36 +72,41 @@ impl DoorDevice {
         receiver: ThreadReceiver<ThreadRequest, Dispatcher>,
         door: Door,
     ) -> DoorDevice {
-        let doorPin: Pin = Pin::new(pin);
-        match doorPin.export() {
-            Ok(()) => Ok(()),
-            Err(error) => println!("Got error when exported GPIO pin: {}", error),
-        };
-        match doorPin.set_direction(Direction::Out) {
-            Ok(()) => Ok(()),
-            Err(error) => println!("Unable to set door GPIO direction: {}", error),
-        };
         // assume for now if error, then gpio pin already exported
         return DoorDevice {
             sender,
             receiver,
             door,
-            doorPin,
-            DoorState::Lock
         };
     }
 }
 
 #[derive(Clone)]
-pub struct Door();
+pub struct Door {
+    state: DoorState,
+    pin: Pin,
+}
+
+impl Door {
+    pub fn new(state: DoorState, pin: Pin) -> Door {
+        Door {
+            state,
+            pin
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Text(pub String);
 
 impl Set<Door, DoorState> for Door {
-    fn set(&mut self, target: DoorState) -> Result<(), Error> {
-        println!("Setting door state to {}", target);
-        self.pin.set_value(target)?;
-        self.state = target;
+    fn set(&mut self, target: &DoorState) -> Result<(), Error> {
+        println!("Setting door state to {:?}", target);
+        let pin_value = target.state_to_pin_value();
+        if let Err(_) = self.pin.set_value(pin_value) {
+            return Err(Error("Could not set pin value".to_string()));
+        }
+        self.state = *target;
         Ok(())
     }
 }

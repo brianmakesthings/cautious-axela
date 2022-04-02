@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use std::process;
 use common::message::{read_from_stream, write_to_stream};
 use common::device::terminal::{Terminal, Text};
+use common::device::door::{Door, DoorState};
 use common::requests_and_responses::{Requests, Responses};
 use common::request::*;
 use crate::web_requests::*;
@@ -27,8 +28,8 @@ impl IDManage {
 enum Commands {
 	TerminalGet,
 	TerminalSet,
-    // DoorGet,
-	// DoorSet,
+    DoorGet,
+	DoorSet,
 	// AudioGet,
 	// AudioSet,
 	// CameraGet,
@@ -44,8 +45,8 @@ impl Commands {
 		match device {
 			"terminalget" => Commands::TerminalGet,
 			"terminalset" => Commands::TerminalSet,
-			// "doorget" => Commands::DoorGet,
-			// "doorset" => Commands::DoorSet,
+			"doorget" => Commands::DoorGet,
+			"doorset" => Commands::DoorSet,
 			// "audioget" => Commands::AudioGet,
             // "audioset" => Commands::AudioSet,
 			// "cameraget" => Commands::CameraGet,
@@ -67,10 +68,13 @@ impl Commands {
 			Commands::TerminalSet => {
 				(Requests::TerminalSetText(BasicSetRequest::<Terminal, Text>(ID(id), Text(msg.to_string()), PhantomData)), id)
             },
-            // Commands::DoorGet => {  
-            // },
-            // Commands::DoorSet => {  
-            // },
+            Commands::DoorGet => {  
+				(Requests::DoorGetState(BasicGetRequest::<Door, DoorState>(ID(id), PhantomData, PhantomData)), id)
+            },
+            Commands::DoorSet => {  
+				//let door_state = serde_json::from_str(&msg.to_string());
+				(Requests:DoorSetState(BasicSetRequest::<Door, DoorState>(ID(id), DoorState::Lock, PhantomData)), id)
+            },
             // Commands::AudioGet => {
             // },
 			// Commands::AudioSet => {
@@ -101,6 +105,20 @@ pub fn match_intercom_response(response: Responses, id: u128) -> String{
 		}
 		Responses::TerminalSetText(_) => {
 			if let Responses::TerminalSetText(msg_set) = response {
+				assert_eq!(msg_set.get_id().0, id);
+				let msg = msg_set.get_candidate().clone();
+				message = msg.0;
+			}
+		}
+		Responses::DoorGetState(_) => {
+			if let Responses::DoorGetState(msg_get) = response {
+				assert_eq!(msg_get.get_id().0, id);
+				let msg = msg_get.get_candidate().clone();
+				message = msg.0;
+			}
+		}
+		Responses::DoorSetState(_) => {
+			if let Responses::DoorSetState(msg_set) = response {
 				assert_eq!(msg_set.get_id().0, id);
 				let msg = msg_set.get_candidate().clone();
 				message = msg.0;

@@ -38,6 +38,7 @@ impl Device<ThreadRequest, Responses> for TerminalDevice {
             Requests::TerminalSetText(x) => self.sender.send(Responses::TerminalSetText(
                 x.get_response(&mut self.terminal),
             )),
+            _ => panic!("Terminal device received invalid request"),
         }
         Shutdown(false)
     }

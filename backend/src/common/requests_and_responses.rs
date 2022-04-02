@@ -11,14 +11,14 @@ pub struct ThreadRequest(pub Requests, pub TcpStream);
 pub enum Requests {
     TerminalGetText(BasicGetRequest<Terminal, Text>),
     TerminalSetText(BasicSetRequest<Terminal, Text>),
-    DoorLockGetState(BasicGetRequest<Door, DoorState>),
-    DoorLockSetState(BasicSetRequest<Door, DoorState>),
+    DoorGetState(BasicGetRequest<Door, DoorState>),
+    DoorSetState(BasicSetRequest<Door, DoorState>),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum Responses {
     TerminalGetText(BasicGetResponse<Terminal, Text>),
     TerminalSetText(BasicSetResponse<Terminal, Text>),
-    DoorLockGetState(BasicGetRequest<Door, DoorState>),
-    DoorLockSetState(BasicSetRequest<Door, DoorState>),
+    DoorGetState(BasicGetResponse<Door, DoorState>),
+    DoorSetState(BasicSetResponse<Door, DoorState>),
 }

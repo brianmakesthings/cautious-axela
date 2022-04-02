@@ -1,4 +1,5 @@
 use crate::device::terminal::Terminal;
+use crate::device::door::Door;
 use crate::message::{read_from_stream, ThreadSender};
 use crate::requests_and_responses::{Requests, ThreadRequest};
 use std::net::{TcpListener, TcpStream};
@@ -7,6 +8,7 @@ use std::thread;
 #[derive(Clone)]
 pub struct Dispatcher {
     terminal_channel: ThreadSender<ThreadRequest, Terminal>,
+    door_channel: ThreadSender<ThreadRequest, Door>,
 }
 
 impl Dispatcher {
@@ -22,10 +24,20 @@ impl Dispatcher {
                 .0
                 .send(ThreadRequest(request, stream))
                 .unwrap(),
+            Requests::DoorGetState(_) => self
+                .door_channel
+                .0
+                .send(ThreadRequest(request, stream))
+                .unwrap(),
+            Requests::DoorSetState(_) => self
+                .door_channel
+                .0
+                .send(ThreadRequest(request, stream))
+                .unwrap(),
         }
     }
-    pub fn new(terminal_channel: ThreadSender<ThreadRequest, Terminal>) -> Dispatcher {
-        Dispatcher { terminal_channel }
+    pub fn new(terminal_channel: ThreadSender<ThreadRequest, Terminal>, door_channel: ThreadSender<ThreadRequest, Door>) -> Dispatcher {
+        Dispatcher { terminal_channel, door_channel }
     }
 }
 
