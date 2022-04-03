@@ -1,11 +1,12 @@
-use crate::device::terminal;
 use crate::device::door;
+use crate::device::terminal;
 use crate::dispatch;
 use crate::message;
 use crate::requests_and_responses::ThreadRequest;
 use std::marker::PhantomData;
 use std::sync::mpsc;
-use sysfs_gpio::{Pin, Direction};
+use std::time::Instant;
+use sysfs_gpio::{Direction, Pin};
 
 pub trait Build {
     type Result;
@@ -32,7 +33,10 @@ impl Build for terminal::TerminalDevice {
 
 impl Build for dispatch::Dispatcher {
     type Result = dispatch::Dispatcher;
-    type Input = (message::ThreadSender<ThreadRequest, terminal::Terminal>, message::ThreadSender<ThreadRequest, door::Door>);
+    type Input = (
+        message::ThreadSender<ThreadRequest, terminal::Terminal>,
+        message::ThreadSender<ThreadRequest, door::Door>,
+    );
     fn build(input: Self::Input) -> Self::Result {
         dispatch::Dispatcher::new(input.0, input.1)
     }
@@ -50,15 +54,15 @@ impl Build for door::DoorDevice {
         let pin = Pin::new(door::PIN_NUMBER);
         if !pin.is_exported() {
             match pin.export() {
-               Ok(()) => (),
-               Err(error) => panic!("Got error when exported GPIO pin: {}", error),
+                Ok(()) => (),
+                Err(error) => panic!("Got error when exported GPIO pin: {}", error),
             };
         }
         match pin.set_direction(Direction::Out) {
             Ok(()) => (),
             Err(error) => panic!("Unable to set door GPIO direction: {}", error),
         };
-        let door = door::Door::new(door::DoorState::Lock, pin);
+        let door = door::Door::new(door::DoorState::Lock, pin, Instant::now());
         let tcp_sender = message::TcpSender(None, PhantomData);
         let door_device = door::DoorDevice::new(tcp_sender, thread_receiver, door);
         let door_channel = message::ThreadSender(sender, PhantomData);
