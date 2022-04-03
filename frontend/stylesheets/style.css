@@ -15,26 +15,33 @@ body{
   color: #fd6261;
 }
 
-.title{
-	padding: 20px 50px 0 50px;
+.title {
+  padding: 20px 50px 0 50px;
 }
 
-.intercom-controls{
-	padding: 20px 50px;	
+.intercom-controls {
+  padding: 20px 50px;
 }
 
-h2{
-	margin: 30px 0 15px 0;
+h2 {
+  margin: 30px 0 15px 0;
 }
 
-input{
-	color: rgb(163, 160, 160);
-	border: none;
-	background-color: transparent;
-	cursor:pointer;
+input {
+  color: rgb(163, 160, 160);
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
 }
 
-video {
-  /* for visibility in testing*/
-  border: #FFFFFF solid;
+.intercom-controls > button {
+  color: rgb(163, 160, 160);
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: large;
+}
+
+.intercom-controls > button:hover {
+  color: #fd6261;
 }

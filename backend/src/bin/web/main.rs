@@ -8,7 +8,7 @@ async fn main() {
         .and(warp::path::end())
         .and(warp::fs::file("./index.html"));
 
-    let public_files = warp::fs::dir("");
+    let public_files = warp::fs::dir("./frontend");
     let routes = webpage
         .or(public_files)
         .with(warp::log("warp::filters::fs"));
