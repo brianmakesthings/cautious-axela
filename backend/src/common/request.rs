@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Error(pub String);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ID(pub u128);
@@ -51,7 +51,7 @@ where
     fn get_id(&self) -> ID;
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct BasicGetResponse<T, U>(pub ID, pub Result<U, Error>, pub PhantomData<T>);
 
 impl<T, U> GetResponse<T, U> for BasicGetResponse<T, U>
@@ -82,7 +82,7 @@ where
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct BasicSetResponse<T, U>(pub ID, pub U, pub Result<(), Error>, pub PhantomData<T>);
 
 impl<T, U> SetResponse<T, U> for BasicSetResponse<T, U>

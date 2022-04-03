@@ -8,7 +8,8 @@ DEPLOY_PATH= $(HOME)/cmpt433/public/myApps/server-copy
 all:
 	mkdir -p $(DEPLOY_PATH)
 	chmod a+rwx $(DEPLOY_PATH)
-	cp -r ../frontend/ $(DEPLOY_PATH)
+	cp -r ../frontend/index.html $(DEPLOY_PATH)
+	cp -r ../frontend/stylesheets/style.css $(DEPLOY_PATH)
 
 	cargo build --release --target armv7-unknown-linux-musleabihf
 	cp ./target/armv7-unknown-linux-musleabihf/release/server $(DEPLOY_PATH)
