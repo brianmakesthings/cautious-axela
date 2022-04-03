@@ -1,6 +1,6 @@
 /// All requests and response types used to communicate with devices in the Intercom.
-use crate::device::terminal::{Terminal, Text};
 use crate::device::door::{Door, DoorState};
+use crate::device::terminal::{Terminal, Text};
 use crate::request::*;
 use serde::{Deserialize, Serialize};
 use std::net::TcpStream;

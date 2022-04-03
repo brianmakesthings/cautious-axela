@@ -1,5 +1,5 @@
-use crate::device::terminal::Terminal;
 use crate::device::door::Door;
+use crate::device::terminal::Terminal;
 use crate::message::{read_from_stream, ThreadSender};
 use crate::requests_and_responses::{Requests, ThreadRequest};
 use std::net::{TcpListener, TcpStream};
@@ -36,8 +36,14 @@ impl Dispatcher {
                 .unwrap(),
         }
     }
-    pub fn new(terminal_channel: ThreadSender<ThreadRequest, Terminal>, door_channel: ThreadSender<ThreadRequest, Door>) -> Dispatcher {
-        Dispatcher { terminal_channel, door_channel }
+    pub fn new(
+        terminal_channel: ThreadSender<ThreadRequest, Terminal>,
+        door_channel: ThreadSender<ThreadRequest, Door>,
+    ) -> Dispatcher {
+        Dispatcher {
+            terminal_channel,
+            door_channel,
+        }
     }
 }
 

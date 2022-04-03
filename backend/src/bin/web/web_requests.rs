@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DeviceCommand(pub String);
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -9,15 +8,14 @@ pub struct Message(pub String);
 pub struct WebRequests(pub DeviceCommand, pub Message);
 
 impl WebRequests {
-
-	pub fn get_device_command(&self) -> DeviceCommand {
-		let command = self.clone();
-		return command.0
-	}
-	pub fn get_msg(&self) -> Message {
-		let message = self.clone();
-		return message.1
-	}
+    pub fn get_device_command(&self) -> DeviceCommand {
+        let command = self.clone();
+        return command.0;
+    }
+    pub fn get_msg(&self) -> Message {
+        let message = self.clone();
+        return message.1;
+    }
 }
 
 // request from web
@@ -27,4 +25,3 @@ pub struct WebSocketRequest {
     pub command: String,
     pub message: String,
 }
-

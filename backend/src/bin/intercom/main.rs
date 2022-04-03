@@ -1,7 +1,7 @@
 use common::build::Build;
 use common::device;
-use common::device::terminal;
 use common::device::door;
+use common::device::terminal;
 use common::dispatch;
 use std::net::TcpListener;
 use std::thread;
