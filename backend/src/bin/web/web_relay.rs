@@ -72,8 +72,8 @@ impl Commands {
 				(Requests::DoorGetState(BasicGetRequest::<Door, DoorState>(ID(id), PhantomData, PhantomData)), id)
             },
             Commands::DoorSet => {  
-				//let door_state = serde_json::from_str(&msg.to_string());
-				(Requests:DoorSetState(BasicSetRequest::<Door, DoorState>(ID(id), DoorState::Lock, PhantomData)), id)
+				let door_state = serde_json::from_str(&msg).unwrap();
+				(Requests::DoorSetState(BasicSetRequest::<Door, DoorState>(ID(id), door_state, PhantomData)), id)
             },
             // Commands::AudioGet => {
             // },
@@ -113,15 +113,15 @@ pub fn match_intercom_response(response: Responses, id: u128) -> String{
 		Responses::DoorGetState(_) => {
 			if let Responses::DoorGetState(msg_get) = response {
 				assert_eq!(msg_get.get_id().0, id);
-				let msg = msg_get.get_candidate().clone();
-				message = msg.0;
+				let msg = msg_get.get_result().unwrap();
+				message = serde_json::to_string(&msg).unwrap();
 			}
 		}
 		Responses::DoorSetState(_) => {
 			if let Responses::DoorSetState(msg_set) = response {
 				assert_eq!(msg_set.get_id().0, id);
 				let msg = msg_set.get_candidate().clone();
-				message = msg.0;
+				message = serde_json::to_string(&msg).unwrap();
 			}
 		}
 	}
@@ -192,5 +192,22 @@ async fn web_to_intercom_message(){
 	println!("reply2: {}", reply_set);
 }
 
+#[allow(dead_code)]
+pub async fn web_to_door(){
+
+	let request_get = WebSocketRequest{id: "1".to_string(), command: "doorget".to_string(), message: "??".to_string()};
+	let reply_get = listen_for_web(request_get).await;
+	println!("reply: {}", reply_get);
+
+	println!("{}", serde_json::to_string(&DoorState::Unlock).unwrap());
+
+	let request_set = WebSocketRequest{id: "2".to_string(), command: "doorset".to_string(), message: "\"Unlock\"".to_string()};
+	let reply_set = listen_for_web(request_set).await;
+	println!("reply2: {}", reply_set);
+
+	let request_get = WebSocketRequest{id: "3".to_string(), command: "doorget".to_string(), message: "??".to_string()};
+	let reply_get = listen_for_web(request_get).await;
+	println!("reply3: {}", reply_get);
+}
 
 

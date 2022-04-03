@@ -15,6 +15,7 @@ async fn main() {
         .with(warp::log("warp::filters::fs"));
     
     println!("Running at http://0.0.0.0:8000");
+    // web_relay::web_to_door().await;
 
     warp::serve(routes).run(([0, 0, 0, 0], 8000)).await;
 }

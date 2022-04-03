@@ -96,9 +96,6 @@ impl Door {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Text(pub String);
-
 impl Set<Door, DoorState> for Door {
     fn set(&mut self, target: &DoorState) -> Result<(), Error> {
         println!("Setting door state to {:?}", target);
