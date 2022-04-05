@@ -23,34 +23,20 @@ impl IDManage {
 	}
 }
 
-// Type for the commands from web
-enum Commands {
-	TerminalGet,
-	TerminalSet,
-    // DoorGet,
-	// DoorSet,
-	// AudioGet,
-	// AudioSet,
-	// CameraGet,
-	// CameraSet,
-	Unknown
-}
-
-
 impl Commands {
 
-	fn match_command(device: String) -> Commands {
+	fn match_command(device: String) -> Command {
 		let device: &str = &*device;
 		match device {
-			"terminalget" => Commands::TerminalGet,
-			"terminalset" => Commands::TerminalSet,
+			"terminalget" => Command::TerminalGet,
+			"terminalset" => Command::TerminalSet,
 			// "doorget" => Commands::DoorGet,
 			// "doorset" => Commands::DoorSet,
 			// "audioget" => Commands::AudioGet,
             // "audioset" => Commands::AudioSet,
 			// "cameraget" => Commands::CameraGet,
             // "cameraset" => Commands::CameraSet,
-			_=> Commands::Unknown,
+			_=> Command::Unknown,
 		}
 	}
 
@@ -60,11 +46,11 @@ impl Commands {
 		let msg = request.get_msg().0;
 		let id = unsafe{INTERCOM_ID.get_id()};
 
-        match self {
-			Commands::TerminalGet => {
+			match self {
+				Commands::TerminalGet => {
 				(Requests::TerminalGetText(BasicGetRequest::<Terminal, Text>(ID(id), PhantomData, PhantomData)), id)
             },
-			Commands::TerminalSet => {
+					Commands::TerminalSet => {
 				(Requests::TerminalSetText(BasicSetRequest::<Terminal, Text>(ID(id), Text(msg.to_string()), PhantomData)), id)
             },
             // Commands::DoorGet => {  
@@ -79,7 +65,7 @@ impl Commands {
 			// },
             // Commands::CameraSet => {
 			// },
-            Commands::Unknown => {
+			Commands::Unknown => {
 				(Requests::TerminalSetText(BasicSetRequest::<Terminal, Text>(ID(id), Text(msg.to_string()), PhantomData)), id)
 			}
         }
@@ -161,18 +147,15 @@ async fn send_command_to_intercom(request: Requests) -> Responses {
 
 
 
-// test 
+// test
 #[allow(dead_code)]
 async fn web_to_intercom_message(){
 
-	let request_get = WebSocketRequest{id: "1".to_string(), command: "terminalget".to_string(), message: "terminal".to_string()};
+	let request_get = WebSocketRequest{id: "1".to_string(), command: Commands::TerminalGet, message: "terminal".to_string()};
 	let reply_get = listen_for_web(request_get).await;
 	println!("reply: {}", reply_get);
 
-	let request_set = WebSocketRequest{id: "2".to_string(), command: "terminalset".to_string(), message: "terminal".to_string()};
+	let request_set = WebSocketRequest{id: "2".to_string(), command: Commands::TerminalSet, message: "terminal".to_string()};
 	let reply_set = listen_for_web(request_set).await;
 	println!("reply2: {}", reply_set);
 }
-
-
-
