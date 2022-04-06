@@ -24,38 +24,7 @@ impl IDManage {
     }
 }
 
-// Type for the commands from web
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum Commands {
-    TerminalGet,
-    TerminalSet,
-    DoorGet,
-    DoorSet,
-    // AudioGet,
-    // AudioSet,
-    // CameraGet,
-    // CameraSet,
-    Ping,
-    RtcSession,
-    Unknown,
-}
-
 impl Commands {
-    fn match_command(device: String) -> Commands {
-        let device: &str = &*device;
-        match device {
-            "terminalget" => Commands::TerminalGet,
-            "terminalset" => Commands::TerminalSet,
-            "doorget" => Commands::DoorGet,
-            "doorset" => Commands::DoorSet,
-            // "audioget" => Commands::AudioGet,
-            // "audioset" => Commands::AudioSet,
-            // "cameraget" => Commands::CameraGet,
-            // "cameraset" => Commands::CameraSet,
-            _ => Commands::Unknown,
-        }
-    }
-
     fn set_command(&self, request: WebRequests) -> (Requests, u128) {
         let msg = request.get_msg().0;
         let id = unsafe { INTERCOM_ID.get_id() };
@@ -104,7 +73,7 @@ impl Commands {
             // },
             // Commands::CameraSet => {
             // },
-            Commands::Unknown => (
+            _  => (
                 Requests::TerminalSetText(BasicSetRequest::<Terminal, Text>(
                     ID(id),
                     Text(msg.to_string()),
@@ -156,7 +125,8 @@ pub async fn listen_for_web(request: WebSocketRequest) -> String {
     let new_request = WebRequests(DeviceCommand(request.command), Message(request.message));
 
     let request_command = new_request.clone();
-    let command = Commands::match_command(new_request.get_device_command().0);
+    // let command = Commands::match_command(new_request.get_device_command().0);
+    let command = request_command.get_device_command().0;
     let (setrequest, id): (Requests, u128) = Commands::set_command(&command, request_command);
 
     // send command to intercom and get reply
@@ -194,7 +164,7 @@ async fn send_command_to_intercom(request: Requests) -> Responses {
 async fn web_to_intercom_message() {
     let request_get = WebSocketRequest {
         id: "1".to_string(),
-        command: "terminalget".to_string(),
+        command: Commands::TerminalGet,
         message: "terminal".to_string(),
     };
     let reply_get = listen_for_web(request_get).await;
@@ -202,7 +172,7 @@ async fn web_to_intercom_message() {
 
     let request_set = WebSocketRequest {
         id: "2".to_string(),
-        command: "terminalset".to_string(),
+        command: Commands::TerminalSet,
         message: "terminal".to_string(),
     };
     let reply_set = listen_for_web(request_set).await;
@@ -213,7 +183,7 @@ async fn web_to_intercom_message() {
 pub async fn web_to_door() {
     let request_get = WebSocketRequest {
         id: "1".to_string(),
-        command: "doorget".to_string(),
+        command: Commands::DoorGet,
         message: "??".to_string(),
     };
     let reply_get = listen_for_web(request_get).await;
@@ -223,7 +193,7 @@ pub async fn web_to_door() {
 
     let request_set = WebSocketRequest {
         id: "2".to_string(),
-        command: "doorset".to_string(),
+        command: Commands::DoorSet,
         message: "\"Unlock\"".to_string(),
     };
     let reply_set = listen_for_web(request_set).await;
@@ -231,7 +201,7 @@ pub async fn web_to_door() {
 
     let request_get = WebSocketRequest {
         id: "3".to_string(),
-        command: "doorget".to_string(),
+        command: Commands::DoorGet,
         message: "??".to_string(),
     };
     let reply_get = listen_for_web(request_get).await;

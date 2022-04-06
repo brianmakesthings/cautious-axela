@@ -26,6 +26,7 @@ use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::rtp_transceiver::rtp_codec::RTCRtpCodecCapability;
 use webrtc::track::track_local::track_local_static_rtp::TrackLocalStaticRTP;
 use webrtc::track::track_local::TrackLocal;
+mod web_relay;
 mod web_requests;
 mod web_rtp;
 mod web_ws;
@@ -266,7 +267,10 @@ async fn client_msg(
 
             match req.command {
                 Commands::Ping => reply(req, client, "pong".to_string()),
-                Commands::Lock => {}
+                Commands::DoorGet | Commands::DoorSet=> {
+                    let res = crate::web_relay::listen_for_web(req.clone()).await;
+                    reply(req, client, res)
+                }
                 Commands::RtcSession => start_rtc(req, client, video_track).await,
                 _ => {
                     println!("unhandled command: {}", msg.to_str().unwrap());

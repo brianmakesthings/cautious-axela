@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct DeviceCommand(pub String);
+pub struct DeviceCommand(pub Commands);
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message(pub String);
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -20,7 +20,7 @@ impl WebRequests {
 }
 
 // request from web
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct WebSocketRequest {
     pub id: String,
     pub command: Commands,
@@ -28,10 +28,11 @@ pub struct WebSocketRequest {
 }
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Commands {
     RtcSession,
-    Lock,
+    DoorGet,
+    DoorSet,
     Ping,
     TerminalGet,
     TerminalSet,
