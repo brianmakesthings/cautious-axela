@@ -73,7 +73,7 @@ impl Commands {
             // },
             // Commands::CameraSet => {
             // },
-            _  => (
+            _ => (
                 Requests::TerminalSetText(BasicSetRequest::<Terminal, Text>(
                     ID(id),
                     Text(msg.to_string()),

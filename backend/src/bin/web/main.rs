@@ -267,7 +267,7 @@ async fn client_msg(
 
             match req.command {
                 Commands::Ping => reply(req, client, "pong".to_string()),
-                Commands::DoorGet | Commands::DoorSet=> {
+                Commands::DoorGet | Commands::DoorSet => {
                     let res = crate::web_relay::listen_for_web(req.clone()).await;
                     reply(req, client, res)
                 }
