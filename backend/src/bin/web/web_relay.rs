@@ -4,6 +4,7 @@ use common::device::terminal::{Terminal, Text};
 use common::message::{read_from_stream, write_to_stream};
 use common::request::*;
 use common::requests_and_responses::{Requests, Responses};
+use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 use std::net::TcpStream;
 use std::process;
@@ -24,7 +25,8 @@ impl IDManage {
 }
 
 // Type for the commands from web
-enum Commands {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum Commands {
     TerminalGet,
     TerminalSet,
     DoorGet,
@@ -33,6 +35,8 @@ enum Commands {
     // AudioSet,
     // CameraGet,
     // CameraSet,
+    Ping,
+    RtcSession,
     Unknown,
 }
 
