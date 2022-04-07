@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use sysfs_gpio::Pin;
 
-pub const PIN_NUMBER: u64 = 48;
+pub const PIN_NUMBER: u64 = 50;
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DoorState {
