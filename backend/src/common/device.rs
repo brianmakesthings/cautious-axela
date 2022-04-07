@@ -1,3 +1,4 @@
+pub mod door;
 pub mod terminal;
 
 use crate::message::{Receive, Send};
