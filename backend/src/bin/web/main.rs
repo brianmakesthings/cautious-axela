@@ -2,7 +2,7 @@ use anyhow::Result;
 use core::convert::Infallible;
 use futures::FutureExt;
 use futures::StreamExt;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::from_str;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -11,6 +11,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 use warp::filters::ws::Message;
 use warp::{self, Filter};
+use web_relay::listen_for_web;
 use web_requests::{Commands, WebSocketRequest};
 use web_ws::{Client, Clients};
 use webrtc::api::interceptor_registry::register_default_interceptors;
@@ -268,7 +269,7 @@ async fn client_msg(
             match req.command {
                 Commands::Ping => reply(req, client, "pong".to_string()),
                 Commands::DoorGet | Commands::DoorSet => {
-                    let res = crate::web_relay::listen_for_web(req.clone()).await;
+                    let res = listen_for_web(req.clone()).await;
                     reply(req, client, res)
                 }
                 Commands::RtcSession => start_rtc(req, client, video_track).await,

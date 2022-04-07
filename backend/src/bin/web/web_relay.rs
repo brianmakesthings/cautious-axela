@@ -4,7 +4,6 @@ use common::device::terminal::{Terminal, Text};
 use common::message::{read_from_stream, write_to_stream};
 use common::request::*;
 use common::requests_and_responses::{Requests, Responses};
-use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 use std::net::TcpStream;
 use std::process;
@@ -157,53 +156,4 @@ async fn send_command_to_intercom(request: Requests) -> Responses {
     .unwrap();
 
     message
-}
-
-// test
-#[allow(dead_code)]
-async fn web_to_intercom_message() {
-    let request_get = WebSocketRequest {
-        id: "1".to_string(),
-        command: Commands::TerminalGet,
-        message: "terminal".to_string(),
-    };
-    let reply_get = listen_for_web(request_get).await;
-    println!("reply: {}", reply_get);
-
-    let request_set = WebSocketRequest {
-        id: "2".to_string(),
-        command: Commands::TerminalSet,
-        message: "terminal".to_string(),
-    };
-    let reply_set = listen_for_web(request_set).await;
-    println!("reply2: {}", reply_set);
-}
-
-#[allow(dead_code)]
-pub async fn web_to_door() {
-    let request_get = WebSocketRequest {
-        id: "1".to_string(),
-        command: Commands::DoorGet,
-        message: "??".to_string(),
-    };
-    let reply_get = listen_for_web(request_get).await;
-    println!("reply: {}", reply_get);
-
-    println!("{}", serde_json::to_string(&DoorState::Unlock).unwrap());
-
-    let request_set = WebSocketRequest {
-        id: "2".to_string(),
-        command: Commands::DoorSet,
-        message: "\"Unlock\"".to_string(),
-    };
-    let reply_set = listen_for_web(request_set).await;
-    println!("reply2: {}", reply_set);
-
-    let request_get = WebSocketRequest {
-        id: "3".to_string(),
-        command: Commands::DoorGet,
-        message: "??".to_string(),
-    };
-    let reply_get = listen_for_web(request_get).await;
-    println!("reply3: {}", reply_get);
 }
