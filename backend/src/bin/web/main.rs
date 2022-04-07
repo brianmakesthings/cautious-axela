@@ -51,21 +51,32 @@ async fn main() {
         "webrtc-rs".to_owned(),
     ));
 
-    let rtc_server_handle = web_rtp::mainloop(video_track.clone());
+    let audio_track = Arc::new(TrackLocalStaticRTP::new(
+        RTCRtpCodecCapability {
+            mime_type: media_engine::MIME_TYPE_OPUS.to_owned(),
+            ..Default::default()
+        },
+        "audio".to_owned(),
+        "webrtc-rs".to_owned(),
+    ));
+
+    let rtc_server_handle_video = web_rtp::mainloop(video_track.clone(), 8002);
+    let rtc_server_handle_audio = web_rtp::mainloop(audio_track.clone(), 8004);
 
     let ws = warp::path("socket")
         .and(warp::ws())
         .and(with_clients(clients.clone()))
-        .and(with_video_track(video_track.clone()))
-        .map(|ws: warp::ws::Ws, clients: Clients, video_track: Arc<_>| {
-            ws.on_upgrade(move |socket| handle_ws_client(socket, clients, video_track))
+        .and(with_track(video_track.clone()))
+        .and(with_track(audio_track.clone()))
+        .map(|ws: warp::ws::Ws, clients: Clients, video_track: Arc<_>, audio_track: Arc<_>| {
+            ws.on_upgrade(move |socket| handle_ws_client(socket, clients, video_track, audio_track))
         });
 
     let webpage = warp::get()
         .and(warp::path::end())
-        .and(warp::fs::file("./index.html"));
+        .and(warp::fs::file("../frontend/index.html"));
 
-    let public_files = warp::fs::dir("frontend/");
+    let public_files = warp::fs::dir("../frontend/");
     let routes = webpage
         .or(ws)
         .or(public_files)
@@ -75,23 +86,25 @@ async fn main() {
 
     warp::serve(routes).run(([0, 0, 0, 0], 5000)).await;
 
-    rtc_server_handle.join().unwrap();
+    rtc_server_handle_video.join().unwrap();
+    rtc_server_handle_audio.join().unwrap();
 }
 
 fn with_clients(clients: Clients) -> impl Filter<Extract = (Clients,), Error = Infallible> + Clone {
     warp::any().map(move || clients.clone())
 }
 
-fn with_video_track(
-    video_track: Arc<TrackLocalStaticRTP>,
+fn with_track(
+    track: Arc<TrackLocalStaticRTP>,
 ) -> impl Filter<Extract = (Arc<TrackLocalStaticRTP>,), Error = Infallible> + Clone {
-    warp::any().map(move || video_track.clone())
+    warp::any().map(move || track.clone())
 }
 
 async fn handle_ws_client(
     websocket: warp::ws::WebSocket,
     clients: Clients,
     video_track: Arc<TrackLocalStaticRTP>,
+    audio_track: Arc<TrackLocalStaticRTP>,
 ) {
     let (sender, mut receiver) = websocket.split();
     let (ws_sender, client_rcv) = mpsc::unbounded_channel();
@@ -124,7 +137,7 @@ async fn handle_ws_client(
             }
         };
 
-        client_msg(&uuid, msg, &clients, video_track.clone()).await;
+        client_msg(&uuid, msg, &clients, video_track.clone(), audio_track.clone()).await;
     }
 
     clients.lock().await.remove(&uuid);
@@ -145,6 +158,7 @@ async fn start_rtc(
     req: WebSocketRequest,
     client: &mut Client,
     video_track: Arc<TrackLocalStaticRTP>,
+    audio_track: Arc<TrackLocalStaticRTP>,
 ) {
     println!("Starting rtc with client {}", client.id);
     let mut m = MediaEngine::default();
@@ -176,7 +190,7 @@ async fn start_rtc(
     // Create a new RTCPeerConnection
     let peer_connection = Arc::new(api.new_peer_connection(config).await.unwrap());
 
-    let rtp_sender = peer_connection
+    let rtp_sender_video = peer_connection
         .add_track(Arc::clone(&video_track) as Arc<dyn TrackLocal + Send + Sync>)
         .await
         .unwrap();
@@ -186,7 +200,18 @@ async fn start_rtc(
     // like NACK this needs to be called.
     tokio::spawn(async move {
         let mut rtcp_buf = vec![0u8; 1500];
-        while let Ok((_, _)) = rtp_sender.read(&mut rtcp_buf).await {}
+        while let Ok((_, _)) = rtp_sender_video.read(&mut rtcp_buf).await {}
+        Result::<()>::Ok(())
+    });
+
+    let rtp_sender_audio = peer_connection
+        .add_track(Arc::clone(&audio_track) as Arc<dyn TrackLocal + Send + Sync>)
+        .await
+        .unwrap();
+
+    tokio::spawn(async move {
+        let mut rtcp_buf = vec![0u8; 1500];
+        while let Ok((_, _)) = rtp_sender_audio.read(&mut rtcp_buf).await {}
         Result::<()>::Ok(())
     });
 
@@ -250,6 +275,7 @@ async fn client_msg(
     msg: Message,
     clients: &Clients,
     video_track: Arc<TrackLocalStaticRTP>,
+    audio_track: Arc<TrackLocalStaticRTP>,
 ) {
     let message = match msg.to_str() {
         Ok(v) => v,
@@ -272,7 +298,7 @@ async fn client_msg(
                     let res = listen_for_web(req.clone()).await;
                     reply(req, client, res)
                 }
-                Commands::RtcSession => start_rtc(req, client, video_track).await,
+                Commands::RtcSession => start_rtc(req, client, video_track, audio_track).await,
                 _ => {
                     println!("unhandled command: {}", msg.to_str().unwrap());
                 }
