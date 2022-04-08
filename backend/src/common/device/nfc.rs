@@ -1,3 +1,4 @@
+use i2cdev::core::I2CDevice;
 use i2cdev::linux::{LinuxI2CDevice};
 use std::io::Result as IOResult;
 use std::process::{Command, Output};
@@ -62,7 +63,7 @@ enum CardTypes {
     Jewel     = 0x04,
 }
 
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct NFCdev {
     i2c: LinuxI2CDevice,
 }
@@ -70,6 +71,7 @@ pub struct NFCdev {
 pub struct NFCID{
 	ids: Vec<Vec<u8>>, 
 }
+
 
 lazy_static! {
     static ref GLOBAL_NFCDEV: Mutex<NFCID> = Mutex::new(NFCID::new());
@@ -107,6 +109,7 @@ impl Device<ThreadRequest, Responses> for NFCDevice {
             Requests::NFCSetID(x) => self.sender.send(Responses::NFCSetID(
                 x.get_response(&mut self.nfc),
             )),
+			_=> panic!("NFC device received invalid request"),
         }
         Shutdown(false)
     }
@@ -152,7 +155,7 @@ impl NFCdev {
 
 	pub fn new() -> Self{
 		let device = LinuxI2CDevice::new("/dev/i2c-2", PN532_ADDRESS.into()).unwrap();
-		let mut nfc = Self{i2c: device};
+		let nfc = Self{i2c: device};
 		nfc
 	}
 
@@ -251,7 +254,11 @@ impl NFCdev {
 		frame.push(checksum_dcs);
 		frame.push(0x00);
 		
-		self.i2c.write(&frame)?
+		match self.i2c.write(&frame) {
+			_ => {
+				Ok(())
+			}
+		}
 	}
 
 
@@ -313,23 +320,25 @@ pub fn start_scanning() {
 	loop {
 		let uid = nfc.get_uid();
 
-	    let mut uid = match uid {
+	    let uid = match uid {
 			Ok(id) => id,
-			Err(e) => {
-				println!("Card Authentication Failed");
+			Err(_) => {
+				// println!("Scanning Card...");
+				sleep(Duration::from_millis(50));
 				continue;
 			},
 		};
 
-		println!("uid = {:x?}", uid.clone());
-
-		let mut nfcdev = GLOBAL_NFCDEV.lock().unwrap();
-		let ids = nfcdev.ids;
+		// println!("uid = {:x?}", uid.clone());
+		
+		let nfcdev = GLOBAL_NFCDEV.lock().unwrap();
+		let ids = nfcdev.ids.clone();
 
 		for data in ids {
-			if data == ids[0] {
+			if data == uid[0] {
 				println!("Card Authenticattion Succeeded. Opening lock.");
 				// open lock
+				sleep(Duration::from_millis(1000));
 			}
 		}
 	}
@@ -349,12 +358,12 @@ pub struct NFCids(pub String);
 
 impl Set<NFC, NFCids> for NFC {
     fn set(&mut self, target: &NFCids) -> Result<(), Error> {
-		let string_id = target.0;
+		let string_id = target.0.clone();
 		
 		let mut id = Vec::new();
-		for item in string_id.split(","){
-			let num = item.parse::<u8>().unwrap();
-			id.push(num);
+		for item in string_id.replace(" ", "").split(","){
+			let hex = i64::from_str_radix(item,16).unwrap();
+			id.push(hex as u8);
 		}
 
 		let mut nfc = GLOBAL_NFCDEV.lock().unwrap();
@@ -368,7 +377,7 @@ impl Set<NFC, NFCids> for NFC {
 // Blocking
 impl Get<NFC, NFCids> for NFC {
     fn get(&self) -> Result<NFCids, Error> {
-		let mut nfc = GLOBAL_NFCDEV.lock().unwrap();
+		let nfc = GLOBAL_NFCDEV.lock().unwrap();
 		let str = format!("ids = {:x?}", nfc.ids);
 		Ok(NFCids(str))
     }
