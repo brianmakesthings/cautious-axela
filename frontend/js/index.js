@@ -1,3 +1,4 @@
+"use strict";
 let socket = new WebSocket(`ws://${location.host}/socket`)
 
 let g_message_id = 0
@@ -29,13 +30,43 @@ socket.onmessage = ev => {
   }
 }
 
+// Helper Functions
+const updateDoorStatus = (status) => {
+  let statusText = "";
+  switch (status) {
+    case "\"Lock\"":
+      statusText = "Locked";
+      break;
+    case "\"Unlock\"":
+      statusText = "Unlocked";
+      break;
+  }
+  door_status.innerHTML = "Status: " + statusText;
+}
+
+// Event Listeners
 btn_lock.addEventListener("click", () => {
-  send("Lock")
+  send("DoorSet", "\"Lock\"", resp => {
+    updateDoorStatus(resp.response);
+  })
 })
 
+btn_unlock.addEventListener("click", () => {
+  send("DoorSet", "\"Unlock\"", resp => {
+    updateDoorStatus(resp.response);
+  })
+})
 
 btn_ping.addEventListener("click", () => {
   send("Ping", "", resp => {
     console.log(resp)
   })
 })
+
+// Timers
+const getDoorStatus = () => {
+  send("DoorGet", "", (resp) => {
+    updateDoorStatus(resp.response);
+  })
+}
+const doorStatusTimeout = setInterval(getDoorStatus, 1000);

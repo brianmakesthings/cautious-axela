@@ -1,3 +1,4 @@
+pub mod door;
 pub mod terminal;
 pub mod nfc;
 

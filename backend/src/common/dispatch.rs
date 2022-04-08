@@ -1,3 +1,4 @@
+use crate::device::door::Door;
 use crate::device::terminal::Terminal;
 use crate::device::nfc::NFC;
 use crate::message::{read_from_stream, ThreadSender};
@@ -9,6 +10,7 @@ use std::thread;
 pub struct Dispatcher {
     terminal_channel: ThreadSender<ThreadRequest, Terminal>,
     nfc_channel: ThreadSender<ThreadRequest, NFC>,
+    door_channel: ThreadSender<ThreadRequest, Door>,
 }
 
 impl Dispatcher {
@@ -34,14 +36,26 @@ impl Dispatcher {
                 .0
                 .send(ThreadRequest(request, stream))
                 .unwrap(),
+            Requests::DoorGetState(_) => self
+                .door_channel
+                .0
+                .send(ThreadRequest(request, stream))
+                .unwrap(),
+            Requests::DoorSetState(_) => self
+                .door_channel
+                .0
+                .send(ThreadRequest(request, stream))
+                .unwrap(),
         }
     }
     pub fn new(
         terminal_channel: ThreadSender<ThreadRequest, Terminal>,
+        door_channel: ThreadSender<ThreadRequest, Door>,
         nfc_channel: ThreadSender<ThreadRequest, NFC>,
     ) -> Dispatcher {
         Dispatcher {
             terminal_channel,
+            door_channel,
             nfc_channel,
         }
     }

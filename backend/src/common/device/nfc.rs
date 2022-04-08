@@ -123,13 +123,6 @@ fn enable_bus() -> IOResult<Output> {
     Command::new("config-pin").arg("P9_20").arg("i2c").output()
 }
 
-pub fn initialize_i2c() -> () {
-    
-	match enable_bus() {
-        _ => (),
-    }
-}
-
 impl NFCDevice {
     pub fn new(
         sender: TcpSender<Responses>,
@@ -305,6 +298,45 @@ impl NFCdev {
 }
 
 
+
+pub fn start_scanning() {
+   
+	match enable_bus() {
+        _ => (),
+    }
+
+	let mut nfc = NFCdev::new();
+	match nfc.init_nfc() {
+        _ => (),
+    }
+
+	loop {
+		let uid = nfc.get_uid();
+
+	    let mut uid = match uid {
+			Ok(id) => id,
+			Err(e) => continue,
+		};
+
+		println!("uid = {:x?}", uid.clone());
+
+		let mut nfcdev = GLOBAL_NFCDEV.lock().unwrap();
+		let ids = nfcdev.ids;
+
+		for data in ids {
+			if data == ids[0] {
+				println!("Uid Authenticated. Opening lock.");
+				// open lock
+			}
+		}
+	}
+}
+
+
+
+
+
+
 #[derive(Clone)]
 pub struct NFC();
 
@@ -325,6 +357,7 @@ impl Set<NFC, NFCids> for NFC {
 		let mut nfc = GLOBAL_NFCDEV.lock().unwrap();
 		nfc.push(id);
 
+		println!("Successfully added id");
         Ok(())
     }
 }
