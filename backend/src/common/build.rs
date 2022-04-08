@@ -1,4 +1,5 @@
 use crate::device::terminal;
+use crate::device::nfc;
 use crate::dispatch;
 use crate::message;
 use crate::requests_and_responses::ThreadRequest;
@@ -28,10 +29,30 @@ impl Build for terminal::TerminalDevice {
     }
 }
 
+impl Build for nfc::NFCDevice {
+    type Input = ();
+    type Result = (
+        message::ThreadSender<ThreadRequest, nfc::NFC>,
+        nfc::NFCDevice,
+    );
+    fn build(_: ()) -> Self::Result {
+        let (sender, receiver) = mpsc::channel();
+        let thread_receiver = message::ThreadReceiver(receiver, PhantomData);
+        let nfc = nfc::NFC();
+        let tcp_sender = message::TcpSender(None, PhantomData);
+        let nfc_device = nfc::NFCDevice::new(tcp_sender, thread_receiver, nfc);
+        let nfc_channel = message::ThreadSender(sender, PhantomData);
+        (nfc_channel, nfc_device)
+    }
+}
+
 impl Build for dispatch::Dispatcher {
     type Result = dispatch::Dispatcher;
-    type Input = message::ThreadSender<ThreadRequest, terminal::Terminal>;
+    type Input = (
+        message::ThreadSender<ThreadRequest, terminal::Terminal>,
+        message::ThreadSender<ThreadRequest, nfc::NFC>,
+    );
     fn build(input: Self::Input) -> Self::Result {
-        dispatch::Dispatcher::new(input)
+        dispatch::Dispatcher::new(input.0, input.1)
     }
 }

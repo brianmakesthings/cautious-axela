@@ -1,4 +1,5 @@
 pub mod terminal;
+pub mod nfc;
 
 use crate::message::{Receive, Send};
 use std::{

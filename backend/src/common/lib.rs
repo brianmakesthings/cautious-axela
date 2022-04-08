@@ -1,3 +1,4 @@
+#[macro_use] extern crate lazy_static;
 pub mod build;
 pub mod device;
 pub mod dispatch;
