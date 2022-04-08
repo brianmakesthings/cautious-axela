@@ -57,11 +57,28 @@ btn_unlock.addEventListener("click", () => {
   })
 })
 
+function isHex(h) {
+  var a = parseInt(h,16);
+  return (a.toString(16) === h)
+}
+
 submit_card.addEventListener("click", () => {
   let msg = document.getElementById('add_card').value;
+
+  const hex = msg.replace(/\s+/g, '').split(",");
+
+  for (let i = 0; i < hex.length; i++) {
+    console.log(hex[i]);
+    if(isHex(hex[i])) {break;} 
+    else {
+      alert('Invalid Card ID');
+      return;
+    }
+  }
   send("NFCSet", msg.toString(), resp => {
     document.getElementById('add_card').value = '';
     console.log(resp.response);
+    alert('Your card id was added successfully.')
   })
 })
 
