@@ -57,6 +57,14 @@ btn_unlock.addEventListener("click", () => {
   })
 })
 
+submit_card.addEventListener("click", () => {
+  let msg = document.getElementById('add_card').value;
+  send("NFCSet", msg.toString(), resp => {
+    document.getElementById('add_card').value = '';
+    console.log(resp.response);
+  })
+})
+
 btn_ping.addEventListener("click", () => {
   send("Ping", "", resp => {
     console.log(resp)

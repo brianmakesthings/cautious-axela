@@ -126,14 +126,15 @@ pub fn match_intercom_response(response: Responses, id: u128) -> String {
         Responses::NFCGetID(_) => {
             if let Responses::NFCGetID(msg_get) = response {
                 assert_eq!(msg_get.get_id().0, id);
-                message = msg_get.get_result().unwrap().0;
+                let msg = msg_get.get_result().unwrap();
+                message = serde_json::to_string(&msg).unwrap();
             }
         }
         Responses::NFCSetID(_) => {
             if let Responses::NFCSetID(msg_set) = response {
                 assert_eq!(msg_set.get_id().0, id);
                 let msg = msg_set.get_candidate().clone();
-                message = msg.0;
+                message = serde_json::to_string(&msg).unwrap();
             }
         }
     }

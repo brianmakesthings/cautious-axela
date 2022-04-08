@@ -272,6 +272,10 @@ async fn client_msg(
                     let res = listen_for_web(req.clone()).await;
                     reply(req, client, res)
                 }
+                Commands::NFCGet | Commands::NFCSet => {
+                    let res = listen_for_web(req.clone()).await;
+                    reply(req, client, res)
+                }
                 Commands::RtcSession => start_rtc(req, client, video_track).await,
                 _ => {
                     println!("unhandled command: {}", msg.to_str().unwrap());

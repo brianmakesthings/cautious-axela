@@ -315,7 +315,10 @@ pub fn start_scanning() {
 
 	    let mut uid = match uid {
 			Ok(id) => id,
-			Err(e) => continue,
+			Err(e) => {
+				println!("Card Authentication Failed");
+				continue;
+			},
 		};
 
 		println!("uid = {:x?}", uid.clone());
@@ -325,7 +328,7 @@ pub fn start_scanning() {
 
 		for data in ids {
 			if data == ids[0] {
-				println!("Uid Authenticated. Opening lock.");
+				println!("Card Authenticattion Succeeded. Opening lock.");
 				// open lock
 			}
 		}
