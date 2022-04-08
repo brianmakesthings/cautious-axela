@@ -2,6 +2,7 @@ let socket = new WebSocket(`ws://${location.host}/socket`)
 
 let g_message_id = 0
 const messages = {}
+let stream = null;
 
 function send(command, message = "", cb = () => { }) {
   let message_id = `${g_message_id++}`
@@ -63,3 +64,21 @@ function start_camera() {
       console.error(err);
     });
 }
+
+mic_on.addEventListener("click", async () => {
+  const constraints = { audio: true, video: false };
+  try {
+    // since we don't have HTTPS, go to about:config set to true media.devices.insecure.enabled and media.getusermedia.insecure.enabled
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    pc.addStream(stream)
+    localAudio.srcObject = stream;
+  } catch (err) {
+    console.error("Failed to obtain user permission", err);
+  }
+})
+
+mic_off.addEventListener("click", () => {
+  stream.getTracks().forEach((track) => {
+    track.stop();
+  })
+})
