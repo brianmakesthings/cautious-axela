@@ -15,8 +15,9 @@
         <h2>Set pin</h2>
         <form action="/newPin" method="post">
             <label for="newPin">New Pin:</label>
-            <input type="text" name="newPin" id="newPin" pattern="[A-Da-d0-9]{4}">
-            <input type="submit">
+            <input type="text" name="newPin" id="newPin" pattern="[A-Da-d0-9]{4}" required>
+			<br>
+            <input type="submit" value="Set New Pin">
         </form>
 
 	</body>
