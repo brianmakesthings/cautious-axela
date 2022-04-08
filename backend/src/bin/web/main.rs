@@ -2,7 +2,7 @@ use anyhow::Result;
 use core::convert::Infallible;
 use futures::FutureExt;
 use futures::StreamExt;
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
 use serde_json::from_str;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 use warp::filters::ws::Message;
-use warp::{self, Filter, http};
+use warp::{self, http, Filter};
 use web_relay::listen_for_web;
 use web_requests::{Commands, WebSocketRequest};
 use web_ws::{Client, Clients};
@@ -60,7 +60,6 @@ async fn main() {
         .map(|ws: warp::ws::Ws, clients: Clients, video_track: Arc<_>| {
             ws.on_upgrade(move |socket| handle_ws_client(socket, clients, video_track))
         });
-    
 
     let set_new_pin_code = warp::post()
         .and(warp::path("newPin"))
