@@ -2,7 +2,7 @@ use anyhow::Result;
 use core::convert::Infallible;
 use futures::FutureExt;
 use futures::StreamExt;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_json::from_str;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 use warp::filters::ws::Message;
-use warp::{self, Filter};
+use warp::{self, Filter, http};
 use web_relay::listen_for_web;
 use web_requests::{Commands, WebSocketRequest};
 use web_ws::{Client, Clients};
@@ -60,6 +60,17 @@ async fn main() {
         .map(|ws: warp::ws::Ws, clients: Clients, video_track: Arc<_>| {
             ws.on_upgrade(move |socket| handle_ws_client(socket, clients, video_track))
         });
+    
+
+    let set_new_pin_code = warp::post()
+        .and(warp::path("newPin"))
+        .and(warp::path::end())
+        .and(warp::body::form())
+        .map(|form_map: HashMap<String, String>| {
+            println!("got {}", form_map["newPin"]);
+            // TODO: Server side validation
+            warp::redirect(http::Uri::from_static("/index.html"))
+        });
 
     let webpage = warp::get()
         .and(warp::path::end())
@@ -69,6 +80,7 @@ async fn main() {
     let routes = webpage
         .or(ws)
         .or(public_files)
+        .or(set_new_pin_code)
         .with(warp::log("warp::filters::fs"));
 
     println!("Running at http://0.0.0.0:5000");
