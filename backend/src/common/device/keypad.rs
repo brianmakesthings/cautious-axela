@@ -64,7 +64,7 @@ impl Device<ThreadRequest, Responses> for KeyPadDevice {
         Shutdown(false)
     }
     fn get_sleep_duration(&self) -> Option<Duration> {
-        Some(Duration::from_millis(100))
+        Some(Duration::from_millis(50))
     }
     fn step(&mut self) {
         self.keypad.add_keys();
