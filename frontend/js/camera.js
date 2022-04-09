@@ -74,12 +74,12 @@ let apc = new RTCPeerConnection({
     }
   ]
 })
-apc.oniceconnectionstatechange = e => { console.log(e, pc.iceConnectionState) }
+apc.oniceconnectionstatechange = e => { console.log(e, apc.iceConnectionState) }
 apc.onicecandidate = event => {
   if (event.candidate === null) {
-    send("RtcAudioSession", JSON.stringify(pc.localDescription), e => {
+    send("RtcAudioSession", JSON.stringify(apc.localDescription), e => {
       try {
-        pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(e.response)))
+        apc.setRemoteDescription(new RTCSessionDescription(JSON.parse(e.response)))
       } catch (e) {
         alert(e)
       }
