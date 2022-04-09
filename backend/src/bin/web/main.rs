@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 use warp::filters::ws::Message;
-use warp::{self, http, Filter};
+use warp::{self, Filter};
 use web_relay::listen_for_web;
 use web_requests::{Commands, WebSocketRequest};
 use web_ws::{Client, Clients};
@@ -61,16 +61,6 @@ async fn main() {
             ws.on_upgrade(move |socket| handle_ws_client(socket, clients, video_track))
         });
 
-    let set_new_pin_code = warp::post()
-        .and(warp::path("newPin"))
-        .and(warp::path::end())
-        .and(warp::body::form())
-        .map(|form_map: HashMap<String, String>| {
-            println!("got {}", form_map["newPin"]);
-            // TODO: Server side validation
-            warp::redirect(http::Uri::from_static("/index.html"))
-        });
-
     let webpage = warp::get()
         .and(warp::path::end())
         .and(warp::fs::file("./index.html"));
@@ -79,7 +69,6 @@ async fn main() {
     let routes = webpage
         .or(ws)
         .or(public_files)
-        .or(set_new_pin_code)
         .with(warp::log("warp::filters::fs"));
 
     println!("Running at http://0.0.0.0:5000");
@@ -279,7 +268,10 @@ async fn client_msg(
 
             match req.command {
                 Commands::Ping => reply(req, client, "pong".to_string()),
-                Commands::DoorGet | Commands::DoorSet => {
+                Commands::DoorGet
+                | Commands::DoorSet
+                | Commands::KeypadSetCode
+                | Commands::KeypadGetCode => {
                     let res = listen_for_web(req.clone()).await;
                     reply(req, client, res)
                 }

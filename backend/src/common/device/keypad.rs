@@ -64,14 +64,14 @@ impl Device<ThreadRequest, Responses> for KeyPadDevice {
         Shutdown(false)
     }
     fn get_sleep_duration(&self) -> Option<Duration> {
-        Some(Duration::from_millis(30))
+        Some(Duration::from_millis(50))
     }
     fn step(&mut self) {
         self.keypad.add_keys();
         let should_door_open = self.keypad.check_candidates();
         if should_door_open {
             let internal_request = InternalThreadRequest(Requests::DoorSetState(
-                BasicSetRequest::<Door, DoorState>(ID(0), DoorState::Lock, PhantomData),
+                BasicSetRequest::<Door, DoorState>(ID(0), DoorState::Unlock, PhantomData),
             ));
             self.door_sender.send(internal_request);
         }
@@ -88,8 +88,8 @@ pub struct KeyPadMatrix {
 }
 
 impl KeyPadMatrix {
-    pub const ROW_PINS: [u64; 4] = [48, 51, 5, 4];
-    pub const COL_PINS: [u64; 4] = [3, 2, 15, 14];
+    pub const COL_PINS: [u64; 4] = [48, 69, 5, 4];
+    pub const ROW_PINS: [u64; 4] = [3, 2, 66, 67];
     const POS_TO_CHAR: [[char; 4]; 4] = [
         ['1', '2', '3', 'A'],
         ['4', '5', '6', 'B'],
@@ -99,11 +99,11 @@ impl KeyPadMatrix {
     pub fn new(rows: [Pin; 4], cols: [Pin; 4]) -> KeyPadMatrix {
         for pin in rows {
             pin.set_direction(sysfs_gpio::Direction::In).unwrap();
-            pin.set_active_low(true).unwrap();
+            pin.set_active_low(false).unwrap();
         }
         for pin in cols {
             pin.set_direction(sysfs_gpio::Direction::In).unwrap();
-            pin.set_active_low(true).unwrap();
+            pin.set_active_low(false).unwrap();
         }
         sleep(Duration::from_millis(500));
         KeyPadMatrix { rows, cols }
@@ -119,7 +119,7 @@ impl KeyPadMatrix {
                 }
             }
             row_pin.set_direction(sysfs_gpio::Direction::In).unwrap();
-            row_pin.set_active_low(true).unwrap();
+            row_pin.set_active_low(false).unwrap();
         }
         set
     }
@@ -219,7 +219,7 @@ impl KeyPad {
             .rev()
             .take(1)
             .map(|x| self.code.is_candidate_valid(x))
-            .all(|x| x)
+            .any(|x| x)
     }
     pub fn get_last_pressed(&self) -> Instant {
         self.last_pressed
