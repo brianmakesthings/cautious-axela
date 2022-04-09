@@ -32,9 +32,9 @@ impl<Type, To> Send<Type> for ThreadSender<Type, To> {
     }
 }
 
-pub struct ThreadReceiver<Type, From>(pub mpsc::Receiver<Type>, pub PhantomData<From>);
+pub struct ThreadReceiver<Type>(pub mpsc::Receiver<Type>);
 
-impl<Type, From> Receive<Type> for ThreadReceiver<Type, From> {
+impl<Type> Receive<Type> for ThreadReceiver<Type> {
     fn receive(&mut self) -> Result<Type, Error> {
         match self.0.try_recv() {
             Ok(x) => Ok(x),
@@ -114,7 +114,7 @@ mod tests {
     fn test_thread_io() {
         let (tx, rx) = mpsc::channel();
         let mut sender = ThreadSender::<ShortTestData, ShortTestData>(tx, PhantomData);
-        let mut receiver = ThreadReceiver::<ShortTestData, ShortTestData>(rx, PhantomData);
+        let mut receiver = ThreadReceiver::<ShortTestData>(rx);
         let data = ShortTestData("Hello there".to_string());
         sender.send(data.clone());
         let result = receiver.receive().unwrap();
