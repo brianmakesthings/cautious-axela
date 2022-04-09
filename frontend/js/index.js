@@ -44,23 +44,6 @@ const updateDoorStatus = (status) => {
   door_status.innerHTML = "Status: " + statusText;
 }
 
-function isHex(h) {
-  var a = parseInt(h,16);
-  return (a.toString(16) === h)
-}
-
-function validate_id(msg){
-  const hex = msg.replace(/\s+/g, '').split(",");
-  for (let i = 0; i < hex.length; i++) {
-    if(isHex(hex[i])) {continue;} 
-    else {
-      alert('Invalid Card ID');
-      document.getElementById('add_card').value = '';
-      return 0;
-    }
-  }
-  return 1; 
-}
 // Event Listeners
 btn_lock.addEventListener("click", () => {
   send("DoorSet", "\"Lock\"", resp => {
@@ -74,18 +57,11 @@ btn_unlock.addEventListener("click", () => {
   })
 })
 
-submit_card.addEventListener("click", () => {
-  let msg = document.getElementById('add_card').value;
-
-  let valid = validate_id(msg);
-  if (valid == 0){
-    return;
-  }
-
-  send("NFCSet", msg.toString(), resp => {
-    document.getElementById('add_card').value = '';
-    console.log(resp.response);
-    alert('Your card id was added successfully.')
+scan_card.addEventListener("click", () => {
+  document.getElementById("scan_card").innerText = "Scanning New Card...";
+  send("NFCSet", "scanCard", _resp => {
+    document.getElementById("scan_card").innerText = "Scan New Card";
+    alert('Your card was added successfully.')
   })
 })
 

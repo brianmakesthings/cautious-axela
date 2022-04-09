@@ -279,11 +279,7 @@ async fn client_msg(
 
             match req.command {
                 Commands::Ping => reply(req, client, "pong".to_string()),
-                Commands::DoorGet | Commands::DoorSet => {
-                    let res = listen_for_web(req.clone()).await;
-                    reply(req, client, res)
-                }
-                Commands::NFCGet | Commands::NFCSet => {
+                Commands::DoorGet | Commands::DoorSet | Commands::NFCGet | Commands::NFCSet => {
                     let res = listen_for_web(req.clone()).await;
                     reply(req, client, res)
                 }

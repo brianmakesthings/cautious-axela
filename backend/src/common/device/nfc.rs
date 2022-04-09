@@ -70,6 +70,7 @@ pub struct NFCdev {
 
 pub struct NFCID{
 	ids: Vec<Vec<u8>>, 
+	add_card: bool,
 }
 
 
@@ -142,7 +143,10 @@ impl NFCDevice {
 
 impl NFCID {
 	fn new() -> NFCID {
-		NFCID {ids: Vec::new()}
+		NFCID {
+			ids: Vec::new(), 
+			add_card: false,
+		}
 	}
     fn push(&mut self, new_id: Vec<u8>) {
         self.ids.push(new_id);
@@ -323,16 +327,22 @@ pub fn start_scanning() {
 	    let uid = match uid {
 			Ok(id) => id,
 			Err(_) => {
-				// println!("Scanning Card...");
 				sleep(Duration::from_millis(50));
 				continue;
 			},
 		};
 
 		// println!("uid = {:x?}", uid.clone());
-		
-		let nfcdev = GLOBAL_NFCDEV.lock().unwrap();
+		let mut nfcdev = GLOBAL_NFCDEV.lock().unwrap();
 		let ids = nfcdev.ids.clone();
+
+		if nfcdev.add_card == true {
+			nfcdev.push(uid[0].clone());
+			nfcdev.add_card = false;
+			println!("Added new card id");
+			sleep(Duration::from_millis(1000));
+			continue;
+		}
 
 		for data in ids {
 			if data == uid[0] {
@@ -356,20 +366,21 @@ pub struct NFC();
 pub struct NFCids(pub String);
 
 
+fn scan_new_card(){
+	let mut nfc = GLOBAL_NFCDEV.lock().unwrap();
+	nfc.add_card = true;
+}
+
+fn card_not_scanned() -> bool{
+	let nfc = GLOBAL_NFCDEV.lock().unwrap();
+	return nfc.add_card;
+}
+
 impl Set<NFC, NFCids> for NFC {
-    fn set(&mut self, target: &NFCids) -> Result<(), Error> {
-		let string_id = target.0.clone();
-		
-		let mut id = Vec::new();
-		for item in string_id.replace(" ", "").split(","){
-			let hex = i64::from_str_radix(item,16).unwrap();
-			id.push(hex as u8);
-		}
-
-		let mut nfc = GLOBAL_NFCDEV.lock().unwrap();
-		nfc.push(id);
-
-		println!("Successfully added id");
+    fn set(&mut self, _target: &NFCids) -> Result<(), Error> {
+		scan_new_card();
+		println!("Scanning for new card...");
+		while card_not_scanned() {}
         Ok(())
     }
 }
