@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, Mutex};
-use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio::time::Duration;
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 use warp::filters::ws::Message;
 use warp::{self, Filter};
@@ -18,7 +18,7 @@ use web_requests::{Commands, WebSocketRequest};
 use web_ws::{Client, Clients};
 use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine;
-use webrtc::api::media_engine::{MediaEngine, MIME_TYPE_OPUS, MIME_TYPE_VP8};
+use webrtc::api::media_engine::{MediaEngine, MIME_TYPE_OPUS};
 use webrtc::api::APIBuilder;
 use webrtc::ice_transport::ice_connection_state::RTCIceConnectionState;
 use webrtc::ice_transport::ice_server::RTCIceServer;
@@ -84,8 +84,6 @@ async fn main() {
         .or(ws)
         .or(public_files)
         .with(warp::log("warp::filters::fs"));
-    
-    // start_audio().await;
 
     println!("Running at http://0.0.0.0:5000");
 
@@ -262,10 +260,7 @@ async fn start_rtc(
 }
 
 // https://github.com/webrtc-rs/examples/tree/main/examples/rtp-forwarder
-async fn start_audio_rtc(
-    req: WebSocketRequest,
-    client: &mut Client,
-) {
+async fn start_audio_rtc(req: WebSocketRequest, client: &mut Client) {
     println!("Starting audio rtc with client {}", client.id);
 
     let mut m = MediaEngine::default();
@@ -283,7 +278,8 @@ async fn start_audio_rtc(
             ..Default::default()
         },
         RTPCodecType::Audio,
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut registry = Registry::new();
 
@@ -293,7 +289,7 @@ async fn start_audio_rtc(
         .with_media_engine(m)
         .with_interceptor_registry(registry)
         .build();
-    
+
     // Prepare the configuration
     let config = RTCConfiguration {
         ice_servers: vec![RTCIceServer {
@@ -305,8 +301,9 @@ async fn start_audio_rtc(
     let peer_connection = Arc::new(api.new_peer_connection(config).await.unwrap());
     peer_connection
         .add_transceiver_from_kind(RTPCodecType::Audio, &[])
-        .await.unwrap();
-    
+        .await
+        .unwrap();
+
     // Prepare udp conns
     // Also update incoming packets with expected PayloadType, the browser may use
     // a different value. We have to modify so our stream matches what rtp-forwarder.sdp expects
@@ -416,7 +413,7 @@ async fn start_audio_rtc(
         }))
         .await;
 
-    let (done_tx, mut done_rx) = tokio::sync::mpsc::channel::<()>(1);
+    let (done_tx, _) = tokio::sync::mpsc::channel::<()>(1);
 
     // Set the handler for Peer connection state
     // This will notify you when the peer has connected/disconnected
@@ -455,7 +452,7 @@ async fn start_audio_rtc(
     // we do this because we only can exchange one signaling message
     // in a production application you should exchange ICE Candidates via OnICECandidate
     let _ = gather_complete.recv().await;
-    
+
     // Output the answer in base64 so we can paste it in browser
     if let Some(local_desc) = peer_connection.local_description().await {
         let json_str = serde_json::to_string(&local_desc).unwrap();
