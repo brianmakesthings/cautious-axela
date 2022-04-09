@@ -1,6 +1,7 @@
 use crate::device::door::Door;
+use crate::device::keypad::KeyPad;
 use crate::device::terminal::Terminal;
-use crate::device::nfc::NFC;
+use crate::device::nfc::NFCdev;
 use crate::message::{read_from_stream, ThreadSender};
 use crate::requests_and_responses::{Requests, ThreadRequest};
 use std::net::{TcpListener, TcpStream};
@@ -9,8 +10,9 @@ use std::thread;
 #[derive(Clone)]
 pub struct Dispatcher {
     terminal_channel: ThreadSender<ThreadRequest, Terminal>,
-    nfc_channel: ThreadSender<ThreadRequest, NFC>,
+    nfc_channel: ThreadSender<ThreadRequest, NFCdev>,
     door_channel: ThreadSender<ThreadRequest, Door>,
+    keypad_channel: ThreadSender<ThreadRequest, KeyPad>,
 }
 
 impl Dispatcher {
@@ -46,16 +48,28 @@ impl Dispatcher {
                 .0
                 .send(ThreadRequest(request, stream))
                 .unwrap(),
+            Requests::KeyPadGetCode(_) => self
+                .keypad_channel
+                .0
+                .send(ThreadRequest(request, stream))
+                .unwrap(),
+            Requests::KeyPadSetCode(_) => self
+                .keypad_channel
+                .0
+                .send(ThreadRequest(request, stream))
+                .unwrap(),
         }
     }
     pub fn new(
         terminal_channel: ThreadSender<ThreadRequest, Terminal>,
         door_channel: ThreadSender<ThreadRequest, Door>,
-        nfc_channel: ThreadSender<ThreadRequest, NFC>,
+        keypad_channel: ThreadSender<ThreadRequest, KeyPad>,
+        nfc_channel: ThreadSender<ThreadRequest, NFCdev>,
     ) -> Dispatcher {
         Dispatcher {
             terminal_channel,
             door_channel,
+            keypad_channel,
             nfc_channel,
         }
     }

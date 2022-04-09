@@ -4,15 +4,15 @@ use std::io::Result as IOResult;
 use std::process::{Command, Output};
 use std::thread::sleep;
 use std::time::Duration;
-use std::sync::Mutex;
+use std::marker::PhantomData;
 
 use super::{Device, Shutdown};
-use crate::dispatch::Dispatcher;
-use crate::message;
+use crate::message::{self, ThreadSender};
 use crate::message::{Receive, Send, TcpSender, ThreadReceiver};
-use crate::request::{Error, Get, GetRequest, Set, SetRequest};
-use crate::requests_and_responses::{Requests, Responses, ThreadRequest};
+use crate::request::{Error, Get, GetRequest, Set, SetRequest, ID, BasicSetRequest};
+use crate::requests_and_responses::{Requests, Responses, ThreadRequest, InternalThreadRequest};
 use serde::{Deserialize, Serialize};
+use crate::device::door::{Door, DoorState};
 
 const PN532_ADDRESS: u8 = 0x48 >> 1;
 
@@ -63,28 +63,19 @@ enum CardTypes {
     Jewel     = 0x04,
 }
 
-// #[derive(Clone)]
+#[derive(Clone)]
 pub struct NFCdev {
-    i2c: LinuxI2CDevice,
-}
-
-pub struct NFCID{
 	ids: Vec<Vec<u8>>, 
 	add_card: bool,
 }
 
 
-lazy_static! {
-    static ref GLOBAL_NFCDEV: Mutex<NFCID> = Mutex::new(NFCID::new());
-}
-
-
 pub struct NFCDevice {
+	door_sender: ThreadSender<InternalThreadRequest, Door>,
     sender: TcpSender<Responses>,
-    receiver: ThreadReceiver<ThreadRequest, Dispatcher>,
-    nfc: NFC,
+    receiver: ThreadReceiver<ThreadRequest>,
+    nfc: NFCdev,
 }
-
 
 impl Send<Responses> for NFCDevice {
     fn send(&mut self, target: Responses) {
@@ -115,9 +106,38 @@ impl Device<ThreadRequest, Responses> for NFCDevice {
         Shutdown(false)
     }
     fn get_sleep_duration(&self) -> Option<Duration> {
-        Some(Duration::from_millis(250))
+        Some(Duration::from_millis(200))
     }
-    fn step(&mut self) {}
+    fn step(&mut self) {
+		let uid = self.nfc.get_uid();
+		let uid = match uid {
+			Ok(id) => id,
+			Err(_) => {
+				return;
+			},
+		};
+
+		let ids = self.nfc.ids.clone();
+		if self.nfc.add_card == true {
+			self.nfc.push(uid[0].clone());
+			self.nfc.add_card = false;
+			println!("Added new card id");
+			sleep(Duration::from_millis(1000));
+			return;
+		}
+		for data in ids {
+			if data == uid[0] {
+				println!("Card Authenticattion Succeeded. Opening lock.");
+				// Unlock door
+				let internal_request = InternalThreadRequest(Requests::DoorSetState(
+					BasicSetRequest::<Door, DoorState>(ID(0), DoorState::Unlock, PhantomData),
+				));
+				self.door_sender.send(internal_request);
+				sleep(Duration::from_millis(1000));
+			}
+		}
+
+	}
 }
 
 
@@ -129,27 +149,17 @@ fn enable_bus() -> IOResult<Output> {
 
 impl NFCDevice {
     pub fn new(
+		door_sender: ThreadSender<InternalThreadRequest, Door>,
         sender: TcpSender<Responses>,
-        receiver: ThreadReceiver<ThreadRequest, Dispatcher>,
-        nfc: NFC,
+        receiver: ThreadReceiver<ThreadRequest>,
+        nfc: NFCdev,
     ) -> NFCDevice {
         return NFCDevice {
+			door_sender,
             sender,
             receiver,
             nfc,
         };
-    }
-}
-
-impl NFCID {
-	fn new() -> NFCID {
-		NFCID {
-			ids: Vec::new(), 
-			add_card: false,
-		}
-	}
-    fn push(&mut self, new_id: Vec<u8>) {
-        self.ids.push(new_id);
     }
 }
 
@@ -158,10 +168,24 @@ impl NFCID {
 impl NFCdev {
 
 	pub fn new() -> Self{
-		let device = LinuxI2CDevice::new("/dev/i2c-2", PN532_ADDRESS.into()).unwrap();
-		let nfc = Self{i2c: device};
+		match enable_bus() {
+			_ => (),
+		}
+		let ids_vec = Vec::new();
+		let card_bool = false;
+		let mut nfc = Self{
+			ids: ids_vec,
+			add_card: card_bool,
+		};
+		match nfc.init_nfc() {
+			_ => (),
+		}
 		nfc
 	}
+
+	fn push(&mut self, new_id: Vec<u8>) {
+        self.ids.push(new_id);
+    }
 
 	pub fn init_nfc(&mut self) -> IOResult<()>{
 		self.send_command_to_nfcdev(&[Commands::SAMConfiguration as u8, 0x01])?;
@@ -201,12 +225,12 @@ impl NFCdev {
 	}
 
 	fn sync_packets(&mut self) -> IOResult<()> {
-
 		sleep(Duration::from_millis(1));
+		let mut i2cdev = LinuxI2CDevice::new("/dev/i2c-2", PN532_ADDRESS.into()).unwrap();
 		
 		for _ in 0..5{
 			let mut data = [0u8; 128];
-			self.i2c.read(&mut data)?;
+			i2cdev.read(&mut data)?;
 			let mut index = 0;
 
 			for j in 0..data.len() {
@@ -245,6 +269,7 @@ impl NFCdev {
 
 		let length = data.len() as u8;
 		let checksum_lcs = !length as u8;
+		let mut i2cdev = LinuxI2CDevice::new("/dev/i2c-2", PN532_ADDRESS.into()).unwrap();
 
 		let tfi = 0xd4;
 		let mut checksum_dcs = tfi;
@@ -258,7 +283,7 @@ impl NFCdev {
 		frame.push(checksum_dcs);
 		frame.push(0x00);
 		
-		match self.i2c.write(&frame) {
+		match i2cdev.write(&frame) {
 			_ => {
 				Ok(())
 			}
@@ -267,13 +292,12 @@ impl NFCdev {
 
 
 	fn receive_from_nfcdev(&mut self) -> IOResult<Vec<u8>> {
-       
+		let mut i2cdev = LinuxI2CDevice::new("/dev/i2c-2", PN532_ADDRESS.into()).unwrap();
+		
 		for _ in 0..10 {
-
 			sleep(Duration::from_millis(1));
-
             let mut data = [0u8; 128];
-            self.i2c.read(&mut data)?;
+            i2cdev.read(&mut data)?;
 			let mut index = 0;
 
 			for j in 0..data.len() {
@@ -310,86 +334,23 @@ impl NFCdev {
 
 
 
-pub fn start_scanning() {
-   
-	match enable_bus() {
-        _ => (),
-    }
-
-	let mut nfc = NFCdev::new();
-	match nfc.init_nfc() {
-        _ => (),
-    }
-
-	loop {
-		let uid = nfc.get_uid();
-
-	    let uid = match uid {
-			Ok(id) => id,
-			Err(_) => {
-				sleep(Duration::from_millis(50));
-				continue;
-			},
-		};
-
-		// println!("uid = {:x?}", uid.clone());
-		let mut nfcdev = GLOBAL_NFCDEV.lock().unwrap();
-		let ids = nfcdev.ids.clone();
-
-		if nfcdev.add_card == true {
-			nfcdev.push(uid[0].clone());
-			nfcdev.add_card = false;
-			println!("Added new card id");
-			sleep(Duration::from_millis(1000));
-			continue;
-		}
-
-		for data in ids {
-			if data == uid[0] {
-				println!("Card Authenticattion Succeeded. Opening lock.");
-				// open lock
-				sleep(Duration::from_millis(1000));
-			}
-		}
-	}
-}
-
-
-
-
-
-
-#[derive(Clone)]
-pub struct NFC();
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct NFCids(pub String);
 
-
-fn scan_new_card(){
-	let mut nfc = GLOBAL_NFCDEV.lock().unwrap();
-	nfc.add_card = true;
-}
-
-fn card_not_scanned() -> bool{
-	let nfc = GLOBAL_NFCDEV.lock().unwrap();
-	return nfc.add_card;
-}
-
-impl Set<NFC, NFCids> for NFC {
+impl Set<NFCdev, NFCids> for NFCdev {
     fn set(&mut self, _target: &NFCids) -> Result<(), Error> {
-		scan_new_card();
+		self.add_card = true;
 		println!("Scanning for new card...");
-		while card_not_scanned() {}
+		sleep(Duration::from_millis(500));
+		// while self.add_card {}
         Ok(())
     }
 }
 
 // Blocking
-impl Get<NFC, NFCids> for NFC {
+impl Get<NFCdev, NFCids> for NFCdev {
     fn get(&self) -> Result<NFCids, Error> {
-		let nfc = GLOBAL_NFCDEV.lock().unwrap();
-		let str = format!("ids = {:x?}", nfc.ids);
+		let str = format!("ids = {:x?}", self.ids);
 		Ok(NFCids(str))
     }
 }
