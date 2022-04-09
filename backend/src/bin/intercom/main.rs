@@ -12,7 +12,7 @@ fn main() {
     let (terminal_channel, terminal_device) = terminal::TerminalDevice::build(());
     let (nfc_channel, nfc_device) = nfc::NFCDevice::build(());
     let (door_channel, door_device) = door::DoorDevice::build(());
-    let dispatcher = dispatch::Dispatcher::build(terminal_channel, nfc_channel, door_channel);
+    let dispatcher = dispatch::Dispatcher::build((terminal_channel, door_channel, nfc_channel));
     let terminal_handle = device::launch_device(terminal_device);
     let nfc_msg_handle = device::launch_device(nfc_device);
     let door_handle = device::launch_device(door_device);
@@ -32,5 +32,6 @@ fn main() {
     terminal_handle.join().unwrap();
     nfc_msg_handle.join().unwrap();
     door_handle.join().unwrap();
+    nfc_handle.join().unwrap();
     dispatch_handle.join().unwrap();
 }

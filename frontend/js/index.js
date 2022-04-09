@@ -44,6 +44,23 @@ const updateDoorStatus = (status) => {
   door_status.innerHTML = "Status: " + statusText;
 }
 
+function isHex(h) {
+  var a = parseInt(h,16);
+  return (a.toString(16) === h)
+}
+
+function validate_id(msg){
+  const hex = msg.replace(/\s+/g, '').split(",");
+  for (let i = 0; i < hex.length; i++) {
+    if(isHex(hex[i])) {continue;} 
+    else {
+      alert('Invalid Card ID');
+      document.getElementById('add_card').value = '';
+      return 0;
+    }
+  }
+  return 1; 
+}
 // Event Listeners
 btn_lock.addEventListener("click", () => {
   send("DoorSet", "\"Lock\"", resp => {
@@ -59,10 +76,34 @@ btn_unlock.addEventListener("click", () => {
 
 submit_card.addEventListener("click", () => {
   let msg = document.getElementById('add_card').value;
+
+  let valid = validate_id(msg);
+  if (valid == 0){
+    return;
+  }
+
   send("NFCSet", msg.toString(), resp => {
     document.getElementById('add_card').value = '';
     console.log(resp.response);
+    alert('Your card id was added successfully.')
   })
+})
+
+show_card.addEventListener("click", () => {
+  let msg = show_card.innerHTML;
+  if (msg == 'Show'){
+    send("NFCGet", msg, resp => {
+      console.log(resp.response);
+      let response = resp.response.slice(8, -2);
+      document.getElementById("display_ids").innerText = response;
+      show_card.innerHTML = "Hide";
+      document.getElementById("display_ids").style.display = 'block';
+    })
+  }
+  else {
+    show_card.innerHTML = "Show";
+    document.getElementById("display_ids").style.display = 'none';
+  }
 })
 
 btn_ping.addEventListener("click", () => {
