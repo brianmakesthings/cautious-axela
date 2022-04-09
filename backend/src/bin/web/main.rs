@@ -315,9 +315,9 @@ async fn start_audio_rtc(
         "audio".to_owned(),
         UdpConn {
             conn: {
-                let sock = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+                let sock = UdpSocket::bind("0.0.0.0:0").await.unwrap();
                 // let sock = web_udp::init("127.0.0.1");
-                sock.connect(format!("127.0.0.1:{}", 4000)).await.unwrap();
+                sock.connect(format!("0.0.0.0:{}", 4000)).await.unwrap();
                 Arc::new(sock)
             },
             payload_type: 111,
