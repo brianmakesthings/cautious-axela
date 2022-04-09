@@ -28,6 +28,7 @@ pub struct WebSocketRequest {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Commands {
+    RtcAudioSession,
     RtcSession,
     DoorGet,
     DoorSet,
