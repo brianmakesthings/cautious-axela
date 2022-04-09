@@ -1,5 +1,6 @@
 use crate::web_requests::*;
 use common::device::door::{Door, DoorState};
+use common::device::keypad::{Code, KeyPad};
 use common::device::terminal::{Terminal, Text};
 use common::message::{read_from_stream, write_to_stream};
 use common::request::*;
@@ -64,14 +65,25 @@ impl Commands {
                     id,
                 )
             }
-            // Commands::AudioGet => {
-            // },
-            // Commands::AudioSet => {
-            // },
-            // Commands::CameraGet => {
-            // },
-            // Commands::CameraSet => {
-            // },
+            Commands::KeypadGetCode => (
+                Requests::KeyPadGetCode(BasicGetRequest::<KeyPad, Code>(
+                    ID(id),
+                    PhantomData,
+                    PhantomData,
+                )),
+                id,
+            ),
+            Commands::KeypadSetCode => {
+                let code = serde_json::from_str(&msg).unwrap();
+                (
+                    Requests::KeyPadSetCode(BasicSetRequest::<KeyPad, Code>(
+                        ID(id),
+                        code,
+                        PhantomData,
+                    )),
+                    id,
+                )
+            }
             _ => (
                 Requests::TerminalSetText(BasicSetRequest::<Terminal, Text>(
                     ID(id),

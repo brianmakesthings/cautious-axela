@@ -61,8 +61,3 @@ input {
 .intercom-controls > button:hover {
   color: #fd6261;
 }
-
-#newPin {
-  background-color: white;
-  color: black;
-}
