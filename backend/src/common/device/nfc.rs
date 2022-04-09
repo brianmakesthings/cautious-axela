@@ -65,8 +65,7 @@ enum CardTypes {
 
 #[derive(Clone)]
 pub struct NFCdev {
-	ids: Vec<Vec<u8>>, 
-	add_card: bool,
+	ids: Vec<Vec<u8>>,
 }
 
 
@@ -118,13 +117,6 @@ impl Device<ThreadRequest, Responses> for NFCDevice {
 		};
 
 		let ids = self.nfc.ids.clone();
-		if self.nfc.add_card == true {
-			self.nfc.push(uid[0].clone());
-			self.nfc.add_card = false;
-			println!("Added new card id");
-			sleep(Duration::from_millis(1000));
-			return;
-		}
 		for data in ids {
 			if data == uid[0] {
 				println!("Card Authenticattion Succeeded. Opening lock.");
@@ -172,10 +164,8 @@ impl NFCdev {
 			_ => (),
 		}
 		let ids_vec = Vec::new();
-		let card_bool = false;
 		let mut nfc = Self{
 			ids: ids_vec,
-			add_card: card_bool,
 		};
 		match nfc.init_nfc() {
 			_ => (),
@@ -339,10 +329,20 @@ pub struct NFCids(pub String);
 
 impl Set<NFCdev, NFCids> for NFCdev {
     fn set(&mut self, _target: &NFCids) -> Result<(), Error> {
-		self.add_card = true;
 		println!("Scanning for new card...");
-		sleep(Duration::from_millis(500));
-		// while self.add_card {}
+		loop {
+			let get_uid = self.get_uid();
+			let uid = match get_uid {
+				Ok(id) => {id},
+				Err(_) => {
+					continue;
+				},
+			};
+			self.push(uid[0].clone());
+			println!("Added new card id");
+			sleep(Duration::from_millis(1000));
+			break;
+		}
         Ok(())
     }
 }
