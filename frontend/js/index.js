@@ -62,6 +62,31 @@ btn_unlock.addEventListener("click", () => {
   })
 })
 
+scan_card.addEventListener("click", () => {
+  document.getElementById("scan_card").innerText = "Scanning New Card...";
+  send("NFCSet", "scanCard", _resp => {
+    document.getElementById("scan_card").innerText = "Scan New Card";
+    alert('Your card was added successfully.')
+  })
+})
+
+show_card.addEventListener("click", () => {
+  let msg = show_card.innerHTML;
+  if (msg == 'Show'){
+    send("NFCGet", msg, resp => {
+      console.log(resp.response);
+      let response = resp.response.slice(8, -2);
+      document.getElementById("display_ids").innerText = response;
+      show_card.innerHTML = "Hide";
+      document.getElementById("display_ids").style.display = 'block';
+    })
+  }
+  else {
+    show_card.innerHTML = "Show";
+    document.getElementById("display_ids").style.display = 'none';
+  }
+})
+
 btn_ping.addEventListener("click", () => {
   send("Ping", "", resp => {
     console.log(resp)

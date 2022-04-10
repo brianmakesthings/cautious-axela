@@ -297,7 +297,9 @@ async fn client_msg(
                 Commands::DoorGet
                 | Commands::DoorSet
                 | Commands::KeypadSetCode
-                | Commands::KeypadGetCode => {
+                | Commands::KeypadGetCode
+                | Commands::NFCGet
+                | Commands::NFCSet => {
                     let res = listen_for_web(req.clone()).await;
                     reply(req, client, res)
                 }

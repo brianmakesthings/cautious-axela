@@ -1,6 +1,7 @@
 use crate::device::door;
 use crate::device::keypad;
 use crate::device::terminal;
+use crate::device::nfc;
 use crate::dispatch;
 use crate::message;
 use crate::message::ThreadSender;
@@ -34,15 +35,34 @@ impl Build for terminal::TerminalDevice {
     }
 }
 
+impl Build for nfc::NFCDevice {
+    type Input = ThreadSender<InternalThreadRequest, door::Door>;
+    type Result = (
+        message::ThreadSender<ThreadRequest, nfc::NFCdev>,
+        nfc::NFCDevice,
+    );
+    fn build(nfc_to_door_sender: Self::Input) -> Self::Result {
+        let (sender, receiver) = mpsc::channel();
+        let thread_receiver = message::ThreadReceiver(receiver);
+        let nfc = nfc::NFCdev::new();
+        let tcp_sender = message::TcpSender(None, PhantomData);
+        let nfc_channel = message::ThreadSender(sender, PhantomData);
+        let nfc_device = 
+            nfc::NFCDevice::new(nfc_to_door_sender, tcp_sender, thread_receiver, nfc);
+        (nfc_channel, nfc_device)
+    }
+}
+
 impl Build for dispatch::Dispatcher {
     type Result = dispatch::Dispatcher;
     type Input = (
         message::ThreadSender<ThreadRequest, terminal::Terminal>,
         message::ThreadSender<ThreadRequest, door::Door>,
         message::ThreadSender<ThreadRequest, keypad::KeyPad>,
+        message::ThreadSender<ThreadRequest, nfc::NFCdev>,
     );
     fn build(input: Self::Input) -> Self::Result {
-        dispatch::Dispatcher::new(input.0, input.1, input.2)
+        dispatch::Dispatcher::new(input.0, input.1, input.2, input.3)
     }
 }
 
@@ -116,3 +136,4 @@ impl Build for keypad::KeyPadDevice {
         (keypad_channel, keypad_device)
     }
 }
+
