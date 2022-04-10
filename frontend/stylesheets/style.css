@@ -61,3 +61,10 @@ input {
 .intercom-controls > button:hover {
   color: #fd6261;
 }
+
+#add_card {
+  background-color: rgb(210, 206, 206);
+  color: #131517;
+  min-height:25px;
+}
+

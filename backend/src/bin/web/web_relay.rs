@@ -2,6 +2,7 @@ use crate::web_requests::*;
 use common::device::door::{Door, DoorState};
 use common::device::keypad::{Code, KeyPad};
 use common::device::terminal::{Terminal, Text};
+use common::device::nfc::{NFCdev, NFCids};
 use common::message::{read_from_stream, write_to_stream};
 use common::request::*;
 use common::requests_and_responses::{Requests, Responses};
@@ -64,11 +65,27 @@ impl Commands {
                     )),
                     id,
                 )
+            },
+            Commands::NFCGet => (
+                Requests::NFCGetID(BasicGetRequest::<NFCdev, NFCids>(
+                    ID(id),
+                    PhantomData,
+                    PhantomData,
+                )),
+                id,
             }
             Commands::KeypadGetCode => (
                 Requests::KeyPadGetCode(BasicGetRequest::<KeyPad, Code>(
                     ID(id),
                     PhantomData,
+                    PhantomData,
+                )),
+                id,
+            ),
+            Commands::NFCSet => (
+                Requests::NFCSetID(BasicSetRequest::<NFCdev, NFCids>(
+                    ID(id),
+                    NFCids(msg.to_string()),
                     PhantomData,
                 )),
                 id,
@@ -97,7 +114,7 @@ impl Commands {
 }
 
 pub fn match_intercom_response(response: Responses, id: u128) -> String {
-    let message;
+    let mut message =  String::from("");
     match response {
         Responses::TerminalGetText(msg_get) => {
             assert_eq!(msg_get.get_id().0, id);
@@ -127,6 +144,20 @@ pub fn match_intercom_response(response: Responses, id: u128) -> String {
             assert_eq!(msg_set.get_id().0, id);
             let msg = msg_set.get_candidate().clone();
             message = serde_json::to_string(&msg).unwrap();
+        }
+        Responses::NFCGetID(_) => {
+            if let Responses::NFCGetID(msg_get) = response {
+                assert_eq!(msg_get.get_id().0, id);
+                let msg = msg_get.get_result().unwrap();
+                message = serde_json::to_string(&msg).unwrap();
+            }
+        }
+        Responses::NFCSetID(_) => {
+            if let Responses::NFCSetID(msg_set) = response {
+                assert_eq!(msg_set.get_id().0, id);
+                let msg = msg_set.get_candidate().clone();
+                message = msg.0;
+            }
         }
     }
     message
