@@ -1,9 +1,8 @@
 use super::{Device, Shutdown};
-use crate::dispatch::Dispatcher;
 use crate::message;
 use crate::message::{Receive, Send, TcpSender, ThreadReceiver};
 use crate::request::{Error, Get, GetRequest, Set, SetRequest};
-use crate::requests_and_responses::{Requests, Responses, ThreadRequest};
+use crate::requests_and_responses::{InternalThreadRequest, Requests, Responses, ThreadRequest};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
@@ -28,8 +27,9 @@ impl DoorState {
 
 pub struct DoorDevice {
     sender: TcpSender<Responses>,
-    receiver: ThreadReceiver<ThreadRequest, Dispatcher>,
+    receiver: ThreadReceiver<ThreadRequest>,
     door: Door,
+    internal_receiver: ThreadReceiver<InternalThreadRequest>,
 }
 
 impl Send<Responses> for DoorDevice {
@@ -63,6 +63,16 @@ impl Device<ThreadRequest, Responses> for DoorDevice {
         Some(Duration::from_millis(500))
     }
     fn step(&mut self) {
+        let received_internal_message = self.internal_receiver.receive();
+        if let Ok(msg) = received_internal_message {
+            let InternalThreadRequest(request) = msg;
+            match request {
+                Requests::DoorSetState(x) => {
+                    Responses::DoorSetState(x.get_response(&mut self.door))
+                }
+                _ => panic!("Door device received internal message other than set state."),
+            };
+        }
         if self.door.state == DoorState::Unlock && self.door.last_unlocked.elapsed().as_secs() > 3 {
             match self.door.set(&DoorState::Lock) {
                 Ok(()) => (),
@@ -75,13 +85,15 @@ impl Device<ThreadRequest, Responses> for DoorDevice {
 impl DoorDevice {
     pub fn new(
         sender: TcpSender<Responses>,
-        receiver: ThreadReceiver<ThreadRequest, Dispatcher>,
+        receiver: ThreadReceiver<ThreadRequest>,
         door: Door,
+        internal_receiver: ThreadReceiver<InternalThreadRequest>,
     ) -> DoorDevice {
         return DoorDevice {
             sender,
             receiver,
             door,
+            internal_receiver,
         };
     }
 }

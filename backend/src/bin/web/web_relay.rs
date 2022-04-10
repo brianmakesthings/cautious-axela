@@ -1,5 +1,6 @@
 use crate::web_requests::*;
 use common::device::door::{Door, DoorState};
+use common::device::keypad::{Code, KeyPad};
 use common::device::terminal::{Terminal, Text};
 use common::message::{read_from_stream, write_to_stream};
 use common::request::*;
@@ -64,14 +65,25 @@ impl Commands {
                     id,
                 )
             }
-            // Commands::AudioGet => {
-            // },
-            // Commands::AudioSet => {
-            // },
-            // Commands::CameraGet => {
-            // },
-            // Commands::CameraSet => {
-            // },
+            Commands::KeypadGetCode => (
+                Requests::KeyPadGetCode(BasicGetRequest::<KeyPad, Code>(
+                    ID(id),
+                    PhantomData,
+                    PhantomData,
+                )),
+                id,
+            ),
+            Commands::KeypadSetCode => {
+                let code = serde_json::from_str(&msg).unwrap();
+                (
+                    Requests::KeyPadSetCode(BasicSetRequest::<KeyPad, Code>(
+                        ID(id),
+                        code,
+                        PhantomData,
+                    )),
+                    id,
+                )
+            }
             _ => (
                 Requests::TerminalSetText(BasicSetRequest::<Terminal, Text>(
                     ID(id),
@@ -85,34 +97,36 @@ impl Commands {
 }
 
 pub fn match_intercom_response(response: Responses, id: u128) -> String {
-    let mut message = "".to_string();
+    let message;
     match response {
-        Responses::TerminalGetText(_) => {
-            if let Responses::TerminalGetText(msg_get) = response {
-                assert_eq!(msg_get.get_id().0, id);
-                message = msg_get.get_result().unwrap().0;
-            }
+        Responses::TerminalGetText(msg_get) => {
+            assert_eq!(msg_get.get_id().0, id);
+            message = msg_get.get_result().unwrap().0;
         }
-        Responses::TerminalSetText(_) => {
-            if let Responses::TerminalSetText(msg_set) = response {
-                assert_eq!(msg_set.get_id().0, id);
-                let msg = msg_set.get_candidate().clone();
-                message = msg.0;
-            }
+        Responses::TerminalSetText(msg_set) => {
+            assert_eq!(msg_set.get_id().0, id);
+            let msg = msg_set.get_candidate().clone();
+            message = msg.0;
         }
-        Responses::DoorGetState(_) => {
-            if let Responses::DoorGetState(msg_get) = response {
-                assert_eq!(msg_get.get_id().0, id);
-                let msg = msg_get.get_result().unwrap();
-                message = serde_json::to_string(&msg).unwrap();
-            }
+        Responses::DoorGetState(msg_get) => {
+            assert_eq!(msg_get.get_id().0, id);
+            let msg = msg_get.get_result().unwrap();
+            message = serde_json::to_string(&msg).unwrap();
         }
-        Responses::DoorSetState(_) => {
-            if let Responses::DoorSetState(msg_set) = response {
-                assert_eq!(msg_set.get_id().0, id);
-                let msg = msg_set.get_candidate().clone();
-                message = serde_json::to_string(&msg).unwrap();
-            }
+        Responses::DoorSetState(msg_set) => {
+            assert_eq!(msg_set.get_id().0, id);
+            let msg = msg_set.get_candidate().clone();
+            message = serde_json::to_string(&msg).unwrap();
+        }
+        Responses::KeyPadGetCode(msg_get) => {
+            assert_eq!(msg_get.get_id().0, id);
+            let msg = msg_get.get_result().unwrap();
+            message = serde_json::to_string(&msg).unwrap();
+        }
+        Responses::KeyPadSetCode(msg_set) => {
+            assert_eq!(msg_set.get_id().0, id);
+            let msg = msg_set.get_candidate().clone();
+            message = serde_json::to_string(&msg).unwrap();
         }
     }
     message

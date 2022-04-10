@@ -1,5 +1,4 @@
 use super::{Device, Shutdown};
-use crate::dispatch::Dispatcher;
 use crate::message;
 use crate::message::{Receive, Send, TcpSender, ThreadReceiver};
 use crate::request::{Error, Get, GetRequest, Set, SetRequest};
@@ -10,7 +9,7 @@ use std::time::Duration;
 
 pub struct TerminalDevice {
     sender: TcpSender<Responses>,
-    receiver: ThreadReceiver<ThreadRequest, Dispatcher>,
+    receiver: ThreadReceiver<ThreadRequest>,
     terminal: Terminal,
 }
 
@@ -51,7 +50,7 @@ impl Device<ThreadRequest, Responses> for TerminalDevice {
 impl TerminalDevice {
     pub fn new(
         sender: TcpSender<Responses>,
-        receiver: ThreadReceiver<ThreadRequest, Dispatcher>,
+        receiver: ThreadReceiver<ThreadRequest>,
         terminal: Terminal,
     ) -> TerminalDevice {
         return TerminalDevice {

@@ -14,24 +14,24 @@ async fn init(host: &str) -> UdpSocket {
     socket
 }
 
-async fn rtp_loop(video_track: Arc<TrackLocalStaticRTP>) {
-    let socket = init("0.0.0.0:8002").await;
+async fn rtp_loop(track: Arc<TrackLocalStaticRTP>, port: u32) {
+    let socket = init(format!("0.0.0.0:{port}").as_str()).await;
 
     let mut inbound_rtp_packet = vec![0u8; 1600]; // UDP MTU
     while let Ok((n, _)) = socket.recv_from(&mut inbound_rtp_packet).await {
-        if let Err(err) = video_track.write(&inbound_rtp_packet[..n]).await {
+        if let Err(err) = track.write(&inbound_rtp_packet[..n]).await {
             if Error::ErrClosedPipe == err {
                 println!("peer connection closed");
             } else {
-                println!("video_track write err: {}", err);
+                println!("track write err: {}", err);
             }
         }
     }
 }
 
-pub fn mainloop(video_track: Arc<TrackLocalStaticRTP>) -> std::thread::JoinHandle<()> {
+pub fn mainloop(track: Arc<TrackLocalStaticRTP>, port: u32) -> std::thread::JoinHandle<()> {
     thread::spawn(move || {
-        let fut = rtp_loop(video_track);
+        let fut = rtp_loop(track, port);
         Runtime::new().unwrap().block_on(fut);
     })
 }

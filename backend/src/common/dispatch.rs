@@ -1,4 +1,5 @@
 use crate::device::door::Door;
+use crate::device::keypad::KeyPad;
 use crate::device::terminal::Terminal;
 use crate::message::{read_from_stream, ThreadSender};
 use crate::requests_and_responses::{Requests, ThreadRequest};
@@ -9,6 +10,7 @@ use std::thread;
 pub struct Dispatcher {
     terminal_channel: ThreadSender<ThreadRequest, Terminal>,
     door_channel: ThreadSender<ThreadRequest, Door>,
+    keypad_channel: ThreadSender<ThreadRequest, KeyPad>,
 }
 
 impl Dispatcher {
@@ -34,15 +36,27 @@ impl Dispatcher {
                 .0
                 .send(ThreadRequest(request, stream))
                 .unwrap(),
+            Requests::KeyPadGetCode(_) => self
+                .keypad_channel
+                .0
+                .send(ThreadRequest(request, stream))
+                .unwrap(),
+            Requests::KeyPadSetCode(_) => self
+                .keypad_channel
+                .0
+                .send(ThreadRequest(request, stream))
+                .unwrap(),
         }
     }
     pub fn new(
         terminal_channel: ThreadSender<ThreadRequest, Terminal>,
         door_channel: ThreadSender<ThreadRequest, Door>,
+        keypad_channel: ThreadSender<ThreadRequest, KeyPad>,
     ) -> Dispatcher {
         Dispatcher {
             terminal_channel,
             door_channel,
+            keypad_channel,
         }
     }
 }

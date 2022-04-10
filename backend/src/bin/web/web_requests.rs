@@ -35,5 +35,7 @@ pub enum Commands {
     Ping,
     TerminalGet,
     TerminalSet,
+    KeypadSetCode,
+    KeypadGetCode,
     Unknown,
 }
