@@ -15,8 +15,6 @@ function send(command, message = "", cb = () => { }) {
 }
 
 socket.onmessage = ev => {
-  console.log("ws", ev)
-
   const msg = JSON.parse(ev.data)
   if (msg.id && msg.id in messages) {
     messages[msg.id](msg)
@@ -33,10 +31,9 @@ let pc = new RTCPeerConnection({
 })
 
 pc.ontrack = ev => {
-  console.log(ev.track.kind)
-  video.srcObject = ev.streams[0]
-  video.autoplay = true
-  video.controls = true
+  if (ev.track.kind == "video") {
+    video.srcObject = ev.streams[0]
+  }
 }
 
 pc.oniceconnectionstatechange = e => { console.log(e, pc.iceConnectionState) }
@@ -52,14 +49,22 @@ pc.onicecandidate = event => {
   }
 }
 
-// Offer to receive 1 audio, and 2 video tracks
-pc.addTransceiver("audio", { "direction": "recvonly" })
 pc.addTransceiver("video", { "direction": "recvonly" })
+pc.addTransceiver("audio", { "direction": "recvonly" })
 
 function start_camera() {
+  btn_connect.disabled = true
   pc.createOffer()
     .then(d => pc.setLocalDescription(d))
     .catch((err) => {
       console.error(err);
     });
+}
+
+btn_connect.addEventListener("click", () => {
+  start_camera()
+})
+
+socket.onopen = () => {
+  btn_connect.disabled = false
 }
