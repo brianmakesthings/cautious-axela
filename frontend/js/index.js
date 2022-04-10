@@ -44,6 +44,11 @@ const updateDoorStatus = (status) => {
   door_status.innerHTML = "Status: " + statusText;
 }
 
+const updatePinStatus = (code) => {
+   code = JSON.parse(code);
+   pin_number.innerHTML = "Current Pin: " + code.data;
+}
+
 // Event Listeners
 btn_lock.addEventListener("click", () => {
   send("DoorSet", "\"Lock\"", resp => {
@@ -88,6 +93,15 @@ btn_ping.addEventListener("click", () => {
   })
 })
 
+submit_new_pin.addEventListener("click", () => {
+   let code = JSON.stringify({
+      data: document.getElementById('pin_input').value
+   });
+   console.log(code);
+   send("KeypadSetCode", code, _ => {
+   })
+})
+
 // Timers
 const getDoorStatus = () => {
   send("DoorGet", "", (resp) => {
@@ -95,3 +109,10 @@ const getDoorStatus = () => {
   })
 }
 const doorStatusTimeout = setInterval(getDoorStatus, 1000);
+
+const getKeyPadCode = () => {
+  send("KeypadGetCode", "", (resp) => {
+    updatePinStatus(resp.response);
+  })
+}
+const keypadStatusTimeout = setInterval(getKeyPadCode, 1000);

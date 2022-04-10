@@ -1,5 +1,6 @@
 use crate::web_requests::*;
 use common::device::door::{Door, DoorState};
+use common::device::keypad::{Code, KeyPad};
 use common::device::terminal::{Terminal, Text};
 use common::device::nfc::{NFCdev, NFCids};
 use common::message::{read_from_stream, write_to_stream};
@@ -72,6 +73,14 @@ impl Commands {
                     PhantomData,
                 )),
                 id,
+            }
+            Commands::KeypadGetCode => (
+                Requests::KeyPadGetCode(BasicGetRequest::<KeyPad, Code>(
+                    ID(id),
+                    PhantomData,
+                    PhantomData,
+                )),
+                id,
             ),
             Commands::NFCSet => (
                 Requests::NFCSetID(BasicSetRequest::<NFCdev, NFCids>(
@@ -81,6 +90,17 @@ impl Commands {
                 )),
                 id,
             ),
+            Commands::KeypadSetCode => {
+                let code = serde_json::from_str(&msg).unwrap();
+                (
+                    Requests::KeyPadSetCode(BasicSetRequest::<KeyPad, Code>(
+                        ID(id),
+                        code,
+                        PhantomData,
+                    )),
+                    id,
+                )
+            }
             _ => (
                 Requests::TerminalSetText(BasicSetRequest::<Terminal, Text>(
                     ID(id),

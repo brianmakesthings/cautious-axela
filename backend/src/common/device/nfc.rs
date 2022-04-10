@@ -331,8 +331,8 @@ impl Set<NFCdev, NFCids> for NFCdev {
     fn set(&mut self, _target: &NFCids) -> Result<(), Error> {
 		println!("Scanning for new card...");
 		loop {
-			let get_uid = self.get_uid();
-			let uid = match get_uid {
+			let uid = self.get_uid();
+			let uid = match uid {
 				Ok(id) => {id},
 				Err(_) => {
 					continue;

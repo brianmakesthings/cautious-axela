@@ -36,5 +36,7 @@ pub enum Commands {
     TerminalSet,
     NFCGet,
     NFCSet,
+    KeypadSetCode,
+    KeypadGetCode,
     Unknown,
 }
