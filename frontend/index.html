@@ -1,45 +1,69 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>Cautious Axela</title>
-	<link rel="stylesheet" href="./stylesheets/style.css" type="text/css"/>
+  <title>Cautious Axela</title>
+  <link rel="stylesheet" href="./stylesheets/style.css" type="text/css" />
 </head>
 
-	<body>
-		<div class="title">
-			<h1>Cautious Axela</h1>
-		</div>
+<body>
+  <div class="title">
+    <h1>Cautious Axela</h1>
+  </div>
 
-		<button id="btn_ping">Ping</button>
+  <div>
+    <h3 id="connection_indicator">Disconnected</h3>
+    <button id="btn_ping">Ping</button>
+  </div>
 
-		<div class="intercom-controls">
-			<h2>Door</h2>
-			<h3 id="door_status">Status: Unknown</h3>
-			<button id="btn_lock">Lock</button>
-			<button id="btn_unlock">Unlock</button>
+  <div class="intercom-controls">
+    <h2>Door</h2>
+    <div>
+      <h3>Status: <span id="door_status">Unknown</span></h3>
+      <div><button id="btn_lock">Lock</button>
+        <button id="btn_unlock">Unlock</button>
+      </div>
+    </div>
 
-			<h2>Card Scanner</h2>
-			<h3 id="card_add">Add card:</h3>
-			<button id="scan_card">Scan New Card</button>
+    <h2>Card Scanner</h2>
+    <div>
+      <h3 id="card_add">Add card:</h3>
+      <button id="scan_card">Scan New Card</button>
 
-			<h3 id="id_card">Accepted Card IDs</h3>
-			<div id="display_ids"></div>
-			<button id="show_card">Show</button>
+      <h3 id="id_card">Accepted Card IDs</h3>
+      <div id="display_ids"></div>
+      <button id="show_card">Show</button>
+    </div>
 
-			<h2>Pin</h2>
-         <h3 id="pin_number">Current Pin: ****</h3>
-         <input type="text" id="pin_input" placeholder="Enter New Pin [A-D][0-9]+">
-         <button id="submit_new_pin">Submit</button>
-         
-			<h2>Camera</h2>
-			<input type="button" id="camera" value="On">
-			<input type="button" id="camera" value="Off">
-		</div>
+    <h2>Pin</h2>
+    <div>
+      <h3>Current Pin: <span id="pin_number">>****</span></h3>
+      <div>
+        <input type="text" id="pin_input" placeholder="Enter New Pin [A-D][0-9]+">
+        <button id="submit_new_pin">Submit</button>
+      </div>
+    </div>
 
-		<div id="cameras"></div>
+    <h2>Camera</h2>
+    <div>
+      <button id="btn_camera_on">On</button>
+      <button id="btn_camera_off">Off</button>
+    </div>
+  </div>
 
-		<script src='js/index.js' type='text/javascript'></script>
-	</body>
+  <div id="cameras">
+    <button id="btn_connect" disabled>Enable camera</button>
+    <video id="video" playsinline autoplay controls></video>
+
+    <h2>Audio</h2>
+    <div>
+      <button id="mic_on">On</button>
+      <button id="mic_off">Off</button>
+    </div>
+    <audio id="localAudio" controls autoplay muted></audio>
+  </div>
+
+  <script src='js/index.js' type='text/javascript'></script>
+</body>
+
 </html>
