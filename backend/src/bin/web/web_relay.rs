@@ -1,6 +1,6 @@
 use crate::web_requests::*;
 use common::device::door::{Door, DoorState};
-use common::device::keypad::{Code, KeyPad};
+use common::device::keypad::{Code, KeyPad, PhoneNumberText};
 use common::device::nfc::{NFCdev, NFCids};
 use common::device::terminal::{Terminal, Text};
 use common::message::{read_from_stream, write_to_stream};
@@ -83,6 +83,14 @@ impl Commands {
                 )),
                 id,
             ),
+            Commands::PhoneGet => (
+                Requests::PhoneGet(BasicGetRequest::<KeyPad, PhoneNumberText>(
+                    ID(id),
+                    PhantomData,
+                    PhantomData,
+                )),
+                id,
+            ),
             Commands::NFCSet => (
                 Requests::NFCSetID(BasicSetRequest::<NFCdev, NFCids>(
                     ID(id),
@@ -97,6 +105,17 @@ impl Commands {
                     Requests::KeyPadSetCode(BasicSetRequest::<KeyPad, Code>(
                         ID(id),
                         code,
+                        PhantomData,
+                    )),
+                    id,
+                )
+            }
+            Commands::PhoneSet => {
+                let phone_number = serde_json::from_str(&msg).unwrap();
+                (
+                    Requests::PhoneSet(BasicSetRequest::<KeyPad, PhoneNumberText>(
+                        ID(id),
+                        phone_number,
                         PhantomData,
                     )),
                     id,
@@ -142,6 +161,16 @@ pub fn match_intercom_response(response: Responses, id: u128) -> String {
             message = serde_json::to_string(&msg).unwrap();
         }
         Responses::KeyPadSetCode(msg_set) => {
+            assert_eq!(msg_set.get_id().0, id);
+            let msg = msg_set.get_candidate().clone();
+            message = serde_json::to_string(&msg).unwrap();
+        }
+        Responses::PhoneGet(msg_get) => {
+            assert_eq!(msg_get.get_id().0, id);
+            let msg = msg_get.get_result().unwrap();
+            message = serde_json::to_string(&msg).unwrap();
+        }
+        Responses::PhoneSet(msg_set) => {
             assert_eq!(msg_set.get_id().0, id);
             let msg = msg_set.get_candidate().clone();
             message = serde_json::to_string(&msg).unwrap();

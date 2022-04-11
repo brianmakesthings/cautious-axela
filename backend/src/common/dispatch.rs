@@ -1,7 +1,7 @@
 use crate::device::door::Door;
 use crate::device::keypad::KeyPad;
-use crate::device::terminal::Terminal;
 use crate::device::nfc::NFCdev;
+use crate::device::terminal::Terminal;
 use crate::message::{read_from_stream, ThreadSender};
 use crate::requests_and_responses::{Requests, ThreadRequest};
 use std::net::{TcpListener, TcpStream};
@@ -32,7 +32,7 @@ impl Dispatcher {
                 .nfc_channel
                 .0
                 .send(ThreadRequest(request, stream))
-                .unwrap(),    
+                .unwrap(),
             Requests::NFCSetID(_) => self
                 .nfc_channel
                 .0
@@ -54,6 +54,16 @@ impl Dispatcher {
                 .send(ThreadRequest(request, stream))
                 .unwrap(),
             Requests::KeyPadSetCode(_) => self
+                .keypad_channel
+                .0
+                .send(ThreadRequest(request, stream))
+                .unwrap(),
+            Requests::PhoneGet(_) => self
+                .keypad_channel
+                .0
+                .send(ThreadRequest(request, stream))
+                .unwrap(),
+            Requests::PhoneSet(_) => self
                 .keypad_channel
                 .0
                 .send(ThreadRequest(request, stream))

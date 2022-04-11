@@ -2,19 +2,21 @@ use common::build::Build;
 use common::device;
 use common::device::door;
 use common::device::keypad;
-use common::device::terminal;
 use common::device::nfc;
+use common::device::terminal;
 use common::dispatch;
 use std::net::TcpListener;
 use std::thread;
 
 fn main() {
     // Create
+    dotenv::dotenv().expect("Failed to read .env file");
     let (terminal_channel, terminal_device) = terminal::TerminalDevice::build(());
     let (door_channel, door_internal_channel, door_device) = door::DoorDevice::build(());
     let (nfc_channel, nfc_device) = nfc::NFCDevice::build(door_internal_channel.clone());
     let (keypad_channel, keypad_device) = keypad::KeyPadDevice::build(door_internal_channel);
-    let dispatcher = dispatch::Dispatcher::build((terminal_channel, door_channel, keypad_channel, nfc_channel));
+    let dispatcher =
+        dispatch::Dispatcher::build((terminal_channel, door_channel, keypad_channel, nfc_channel));
     let terminal_handle = device::launch_device(terminal_device);
     let nfc_handle = device::launch_device(nfc_device);
     let door_handle = device::launch_device(door_device);

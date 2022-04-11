@@ -351,9 +351,13 @@ async fn start_audio_rtc(req: WebSocketRequest, client: &mut Client) {
             conn: {
                 let sock = UdpSocket::bind("0.0.0.0:0").await.unwrap();
                 // let sock = web_udp::init("127.0.0.1");
-                sock.connect(format!("{}:{}", env::var("INTERCOM_ADDRESS").unwrap(), 4000))
-                    .await
-                    .unwrap();
+                sock.connect(format!(
+                    "{}:{}",
+                    env::var("INTERCOM_ADDRESS").unwrap(),
+                    4000
+                ))
+                .await
+                .unwrap();
                 Arc::new(sock)
             },
             payload_type: 111,
@@ -527,6 +531,8 @@ async fn client_msg(
                 Commands::Ping => reply(req, client, "pong".to_string()),
                 Commands::DoorGet
                 | Commands::DoorSet
+                | Commands::PhoneGet
+                | Commands::PhoneSet
                 | Commands::KeypadSetCode
                 | Commands::KeypadGetCode
                 | Commands::NFCGet

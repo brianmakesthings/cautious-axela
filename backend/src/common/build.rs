@@ -1,7 +1,7 @@
 use crate::device::door;
 use crate::device::keypad;
-use crate::device::terminal;
 use crate::device::nfc;
+use crate::device::terminal;
 use crate::dispatch;
 use crate::message;
 use crate::message::ThreadSender;
@@ -47,8 +47,7 @@ impl Build for nfc::NFCDevice {
         let nfc = nfc::NFCdev::new();
         let tcp_sender = message::TcpSender(None, PhantomData);
         let nfc_channel = message::ThreadSender(sender, PhantomData);
-        let nfc_device = 
-            nfc::NFCDevice::new(nfc_to_door_sender, tcp_sender, thread_receiver, nfc);
+        let nfc_device = nfc::NFCDevice::new(nfc_to_door_sender, tcp_sender, thread_receiver, nfc);
         (nfc_channel, nfc_device)
     }
 }
@@ -91,7 +90,8 @@ impl Build for door::DoorDevice {
         let door = door::Door::new(door::DoorState::Lock, pin, Instant::now());
         let tcp_sender = message::TcpSender(None, PhantomData);
         let internal_door_receiver = message::ThreadReceiver(internal_receiver);
-        let door_device = door::DoorDevice::new(tcp_sender, thread_receiver, door, internal_door_receiver);
+        let door_device =
+            door::DoorDevice::new(tcp_sender, thread_receiver, door, internal_door_receiver);
         let door_channel = message::ThreadSender(sender, PhantomData);
         let internal_door_sender = message::ThreadSender(internal_sender, PhantomData);
         (door_channel, internal_door_sender, door_device)
@@ -136,4 +136,3 @@ impl Build for keypad::KeyPadDevice {
         (keypad_channel, keypad_device)
     }
 }
-

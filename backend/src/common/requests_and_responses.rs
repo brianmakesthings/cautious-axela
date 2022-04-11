@@ -1,8 +1,8 @@
 /// All requests and response types used to communicate with devices in the Intercom.
 use crate::device::door::{Door, DoorState};
-use crate::device::keypad::{Code, KeyPad};
-use crate::device::terminal::{Terminal, Text};
+use crate::device::keypad::{Code, KeyPad, PhoneNumberText};
 use crate::device::nfc::{NFCdev, NFCids};
+use crate::device::terminal::{Terminal, Text};
 use crate::request::*;
 use serde::{Deserialize, Serialize};
 use std::net::TcpStream;
@@ -20,6 +20,8 @@ pub enum Requests {
     DoorSetState(BasicSetRequest<Door, DoorState>),
     KeyPadGetCode(BasicGetRequest<KeyPad, Code>),
     KeyPadSetCode(BasicSetRequest<KeyPad, Code>),
+    PhoneGet(BasicGetRequest<KeyPad, PhoneNumberText>),
+    PhoneSet(BasicSetRequest<KeyPad, PhoneNumberText>),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -32,4 +34,6 @@ pub enum Responses {
     DoorSetState(BasicSetResponse<Door, DoorState>),
     KeyPadGetCode(BasicGetResponse<KeyPad, Code>),
     KeyPadSetCode(BasicSetResponse<KeyPad, Code>),
+    PhoneGet(BasicGetResponse<KeyPad, PhoneNumberText>),
+    PhoneSet(BasicSetResponse<KeyPad, PhoneNumberText>),
 }

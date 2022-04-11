@@ -39,5 +39,7 @@ pub enum Commands {
     NFCSet,
     KeypadSetCode,
     KeypadGetCode,
+    PhoneGet,
+    PhoneSet,
     Unknown,
 }

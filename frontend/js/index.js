@@ -53,6 +53,11 @@ const updatePinStatus = (code) => {
   pin_number.textContent = code.data
 }
 
+const updatePhoneStatus = (phone) => {
+   phone = JSON.parse(phone)
+   phone_number.textContent = phone
+}
+
 // Event Listeners
 btn_lock.addEventListener("click", () => {
   send("DoorSet", "\"Lock\"", resp => {
@@ -106,6 +111,12 @@ submit_new_pin.addEventListener("click", () => {
   })
 })
 
+submit_new_phone.addEventListener("click", () => {
+   let phone = JSON.stringify(document.getElementById("phone_input").value)
+   send("PhoneSet", phone, _ => {
+   })
+})
+
 // Timers
 const getDoorStatus = () => {
   send("DoorGet", "", (resp) => {
@@ -121,7 +132,15 @@ const getKeyPadCode = () => {
   })
 }
 
+const getPhone = () => {
+  send("PhoneGet", "", (resp) => {
+    updatePhoneStatus(resp.response)
+  })
+}
+
 const keypadStatusTimeout = setInterval(getKeyPadCode, 1000)
+
+const phoneNumberStatusTimeout = setInterval(getPhone, 1000);
 
 /* camera related stuff */
 
