@@ -5,11 +5,17 @@ use crate::message::{self, ThreadSender};
 use crate::message::{Receive, Send, TcpSender, ThreadReceiver};
 use crate::request::{BasicSetRequest, Error, Get, GetRequest, Set, SetRequest, ID};
 use crate::requests_and_responses::{InternalThreadRequest, Requests, Responses, ThreadRequest};
+use openapi::apis::{configuration::Configuration, default_api as twilio_api};
+use phonenumber::PhoneNumber;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashSet, VecDeque};
+use std::fs::File;
+use std::io::Write;
 use std::marker::PhantomData;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use std::{env, fs};
+use tokio::runtime::{Builder, Runtime};
 
 use sysfs_gpio::Pin;
 
@@ -18,6 +24,7 @@ pub struct KeyPadDevice {
     sender: TcpSender<Responses>,
     receiver: ThreadReceiver<ThreadRequest>,
     keypad: KeyPad,
+    runtime: Runtime,
 }
 
 impl KeyPadDevice {
@@ -27,11 +34,17 @@ impl KeyPadDevice {
         receiver: ThreadReceiver<ThreadRequest>,
         keypad: KeyPad,
     ) -> KeyPadDevice {
+        let runtime = Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
         KeyPadDevice {
             door_sender,
             sender,
             receiver,
             keypad,
+            runtime,
         }
     }
 }
@@ -59,6 +72,12 @@ impl Device<ThreadRequest, Responses> for KeyPadDevice {
             Requests::KeyPadSetCode(x) => self
                 .sender
                 .send(Responses::KeyPadSetCode(x.get_response(&mut self.keypad))),
+            Requests::PhoneGet(x) => self
+                .sender
+                .send(Responses::PhoneGet(x.get_response(&self.keypad))),
+            Requests::PhoneSet(x) => self
+                .sender
+                .send(Responses::PhoneSet(x.get_response(&mut self.keypad))),
             _ => panic!("Keypad device received invalid request"),
         }
         Shutdown(false)
@@ -68,12 +87,19 @@ impl Device<ThreadRequest, Responses> for KeyPadDevice {
     }
     fn step(&mut self) {
         self.keypad.add_keys();
-        let should_door_open = self.keypad.check_candidates();
-        if should_door_open {
-            let internal_request = InternalThreadRequest(Requests::DoorSetState(
-                BasicSetRequest::<Door, DoorState>(ID(0), DoorState::Unlock, PhantomData),
-            ));
-            self.door_sender.send(internal_request);
+        let keypad_code = self.keypad.check_candidates();
+        match keypad_code {
+            CodeType::Code => {
+                let internal_request = InternalThreadRequest(Requests::DoorSetState(
+                    BasicSetRequest::<Door, DoorState>(ID(0), DoorState::Unlock, PhantomData),
+                ));
+                self.door_sender.send(internal_request);
+            }
+            CodeType::Ring if self.keypad.last_rang.elapsed() >= KeyPad::RING_TIMER => {
+                self.keypad.last_rang = Instant::now();
+                self.runtime.spawn(send_notification());
+            }
+            _ => (),
         }
         if self.keypad.last_pressed.elapsed() >= KeyPad::RESET_TIMER {
             self.keypad.reset_input_keys();
@@ -88,8 +114,8 @@ pub struct KeyPadMatrix {
 }
 
 impl KeyPadMatrix {
-    pub const COL_PINS: [u64; 4] = [48, 69, 5, 4];
-    pub const ROW_PINS: [u64; 4] = [3, 2, 66, 67];
+    pub const COL_PINS: [u64; 4] = [66, 67, 69, 68];
+    pub const ROW_PINS: [u64; 4] = [3, 2, 15, 115];
     const POS_TO_CHAR: [[char; 4]; 4] = [
         ['1', '2', '3', 'A'],
         ['4', '5', '6', 'B'],
@@ -182,16 +208,27 @@ impl CandidateKey {
     }
 }
 
+#[derive(Copy, Clone)]
+pub enum CodeType {
+    Code,
+    Ring,
+    Invalid,
+}
+
 #[derive(Clone)]
 pub struct KeyPad {
     code: Code,
     matrix: KeyPadMatrix,
     potential_key: CandidateKey,
     last_pressed: Instant,
+    last_rang: Instant,
+    phonenumber: PhoneNumber,
 }
 
 impl KeyPad {
     pub const RESET_TIMER: Duration = Duration::from_secs(5);
+    pub const RING_TIMER: Duration = Duration::from_secs(5);
+    const RING: &'static str = "***";
     pub fn new(
         code: Code,
         matrix: KeyPadMatrix,
@@ -203,6 +240,12 @@ impl KeyPad {
             matrix,
             potential_key,
             last_pressed,
+            last_rang: Instant::now() - KeyPad::RING_TIMER,
+            phonenumber: phonenumber::parse(
+                None,
+                env::var("TO_NUMBER").expect("Failed to parse 'to' number"),
+            )
+            .unwrap(),
         }
     }
     pub fn add_keys(&mut self) {
@@ -212,14 +255,27 @@ impl KeyPad {
         }
         self.potential_key.add_keys(keys);
     }
-    pub fn check_candidates(&mut self) -> bool {
+    pub fn check_candidates(&mut self) -> CodeType {
         let candidates = self.potential_key.get_candidate_keys();
-        candidates
+        let v: Vec<CodeType> = candidates
             .iter()
             .rev()
             .take(1)
-            .map(|x| self.code.is_candidate_valid(x))
-            .any(|x| x)
+            .map(|x| {
+                if self.code.is_candidate_valid(x) {
+                    CodeType::Code
+                } else if x == KeyPad::RING {
+                    CodeType::Ring
+                } else {
+                    CodeType::Invalid
+                }
+            })
+            .collect();
+        if v.is_empty() {
+            CodeType::Invalid
+        } else {
+            v[0]
+        }
     }
     pub fn get_last_pressed(&self) -> Instant {
         self.last_pressed
@@ -238,7 +294,7 @@ impl Code {
     const VALID_CHARS: [char; 14] = [
         'A', 'B', 'C', 'D', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
     ];
-    const START_UP_CODE: &'static str = "0000";
+    const START_UP_CODE_FILE: &'static str = "code";
     fn validate_string(string: &str) -> bool {
         string
             .chars()
@@ -257,9 +313,11 @@ impl Code {
         candidate == self.data
     }
     pub fn new() -> Code {
-        Code {
-            data: Code::START_UP_CODE.to_string(),
-        }
+        let code = fs::read_to_string(Code::START_UP_CODE_FILE)
+            .unwrap()
+            .trim()
+            .to_owned();
+        Code { data: code }
     }
 }
 
@@ -275,9 +333,72 @@ impl Set<KeyPad, Code> for KeyPad {
         match new_code_result {
             Ok(new_code) => {
                 self.code = new_code;
+                let mut file = File::create(Code::START_UP_CODE_FILE).unwrap();
+                file.write_all(self.code.data.as_bytes()).unwrap();
                 Ok(())
             }
             Err(error) => Err(error),
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PhoneNumberText(pub String);
+
+impl Get<KeyPad, PhoneNumberText> for KeyPad {
+    fn get(&self) -> Result<PhoneNumberText, Error> {
+        Ok(PhoneNumberText(self.phonenumber.to_string()))
+    }
+}
+
+impl Set<KeyPad, PhoneNumberText> for KeyPad {
+    fn set(&mut self, target: &PhoneNumberText) -> Result<(), Error> {
+        if phonenumber::is_viable(&target.0) {
+            self.phonenumber = phonenumber::parse(None, &target.0).unwrap();
+            Ok(())
+        } else {
+            Err(Error("Invalid phonenumber".to_string()))
+        }
+    }
+}
+
+async fn send_notification() {
+    let account_sid = env::var("TWILIO_ACCOUNT_SID").expect("Failed to parse Account SID");
+    let api_key = env::var("TWILIO_API_KEY").expect("Failed to parse API Key");
+    let api_key_secret = env::var("TWILIO_API_KEY_SECRET").expect("Failed to parse API Key Secret");
+    let from = env::var("TWILIO_PHONE_NUMBER").expect("Failed to parse 'from' number");
+    let to = env::var("TO_NUMBER").expect("Failed to parse 'to' number");
+
+    let mut twilio_config = Configuration::default();
+    twilio_config.basic_auth = Some((api_key, Some(api_key_secret)));
+
+    let message = twilio_api::create_message(
+        &twilio_config,
+        &account_sid,
+        &to,
+        None,
+        None,
+        None,
+        Some("Someone is ringing the bell!"),
+        None,
+        None,
+        Some(&from),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+    .await;
+
+    let _result = match message {
+        Ok(result) => result,
+        Err(error) => panic!("Something went wrong, {:?}", error),
+    };
 }

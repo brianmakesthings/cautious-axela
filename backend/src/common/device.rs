@@ -1,7 +1,7 @@
 pub mod door;
-pub mod terminal;
-pub mod nfc;
 pub mod keypad;
+pub mod nfc;
+pub mod terminal;
 
 use crate::message::{Receive, Send};
 use std::{

@@ -32,6 +32,10 @@ chrono = "0.4.19"
 log = "0.4.14"
 i2cdev = "0.4.2"
 lazy_static = "0.2"
+dotenv = "0.15.0"
+openapi = { path = "../twilio-rust" }
+openssl = { version = "0.10.29", features = ["vendored"] }
+phonenumber = "0.3.1+8.12.9"
 
 [patch.crates-io]
 rcgen = { git = "https://github.com/wwww-wwww/rcgen", branch = "32bit" }
