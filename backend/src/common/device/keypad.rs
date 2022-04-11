@@ -97,7 +97,7 @@ impl Device<ThreadRequest, Responses> for KeyPadDevice {
             }
             CodeType::Ring if self.keypad.last_rang.elapsed() >= KeyPad::RING_TIMER => {
                 self.keypad.last_rang = Instant::now();
-                self.runtime.spawn(send_notification());
+                self.runtime.spawn(send_notification(self.keypad.phonenumber.to_string()));
             }
             _ => (),
         }
@@ -362,12 +362,11 @@ impl Set<KeyPad, PhoneNumberText> for KeyPad {
     }
 }
 
-async fn send_notification() {
+async fn send_notification(to: &str) {
     let account_sid = env::var("TWILIO_ACCOUNT_SID").expect("Failed to parse Account SID");
     let api_key = env::var("TWILIO_API_KEY").expect("Failed to parse API Key");
     let api_key_secret = env::var("TWILIO_API_KEY_SECRET").expect("Failed to parse API Key Secret");
     let from = env::var("TWILIO_PHONE_NUMBER").expect("Failed to parse 'from' number");
-    let to = env::var("TO_NUMBER").expect("Failed to parse 'to' number");
 
     let mut twilio_config = Configuration::default();
     twilio_config.basic_auth = Some((api_key, Some(api_key_secret)));
