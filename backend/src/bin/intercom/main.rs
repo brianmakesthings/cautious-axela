@@ -21,7 +21,7 @@ fn main() {
     let keypad_handle = device::launch_device(keypad_device);
 
     // Start server
-    let listener = TcpListener::bind("127.0.0.1:2000").unwrap();
+    let listener = TcpListener::bind("0.0.0.0:2000").unwrap();
     println!("Listening on 192.168.7.2:2000");
     let dispatch_handle = thread::spawn(|| {
         dispatch::start_server(dispatcher, listener);
