@@ -1,11 +1,12 @@
 use crate::web_requests::*;
 use common::device::door::{Door, DoorState};
 use common::device::keypad::{Code, KeyPad};
-use common::device::terminal::{Terminal, Text};
 use common::device::nfc::{NFCdev, NFCids};
+use common::device::terminal::{Terminal, Text};
 use common::message::{read_from_stream, write_to_stream};
 use common::request::*;
 use common::requests_and_responses::{Requests, Responses};
+use std::env;
 use std::marker::PhantomData;
 use std::net::TcpStream;
 use std::process;
@@ -65,7 +66,7 @@ impl Commands {
                     )),
                     id,
                 )
-            },
+            }
             Commands::NFCGet => (
                 Requests::NFCGetID(BasicGetRequest::<NFCdev, NFCids>(
                     ID(id),
@@ -114,7 +115,7 @@ impl Commands {
 }
 
 pub fn match_intercom_response(response: Responses, id: u128) -> String {
-    let mut message =  String::from("");
+    let mut message = String::from("");
     match response {
         Responses::TerminalGetText(msg_get) => {
             assert_eq!(msg_get.get_id().0, id);
@@ -182,7 +183,7 @@ pub async fn listen_for_web(request: WebSocketRequest) -> String {
 
 async fn send_command_to_intercom(request: Requests) -> Responses {
     let message = tokio::task::spawn(async move {
-        match TcpStream::connect("127.0.0.1:2000") {
+        match TcpStream::connect(format!("{}:2000", env::var("INTERCOM_ADDRESS").unwrap())) {
             Ok(mut intercom_stream) => {
                 // send command to intercom
                 write_to_stream(&mut intercom_stream, &request);

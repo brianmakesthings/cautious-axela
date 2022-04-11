@@ -39,6 +39,7 @@ mod web_relay;
 mod web_requests;
 mod web_rtp;
 mod web_ws;
+use std::env;
 
 #[derive(Serialize, Debug)]
 struct WsResult {
@@ -82,9 +83,13 @@ async fn main() {
         .and(with_clients(clients.clone()))
         .and(with_track(video_track.clone()))
         .and(with_track(audio_track.clone()))
-        .map(|ws: warp::ws::Ws, clients: Clients, video_track: Arc<_>, audio_track: Arc<_>| {
-            ws.on_upgrade(move |socket| handle_ws_client(socket, clients, video_track, audio_track))
-        });
+        .map(
+            |ws: warp::ws::Ws, clients: Clients, video_track: Arc<_>, audio_track: Arc<_>| {
+                ws.on_upgrade(move |socket| {
+                    handle_ws_client(socket, clients, video_track, audio_track)
+                })
+            },
+        );
 
     let webpage = warp::get()
         .and(warp::path::end())
@@ -151,7 +156,14 @@ async fn handle_ws_client(
             }
         };
 
-        client_msg(&uuid, msg, &clients, video_track.clone(), audio_track.clone()).await;
+        client_msg(
+            &uuid,
+            msg,
+            &clients,
+            video_track.clone(),
+            audio_track.clone(),
+        )
+        .await;
     }
 
     clients.lock().await.remove(&uuid);
@@ -339,7 +351,9 @@ async fn start_audio_rtc(req: WebSocketRequest, client: &mut Client) {
             conn: {
                 let sock = UdpSocket::bind("0.0.0.0:0").await.unwrap();
                 // let sock = web_udp::init("127.0.0.1");
-                sock.connect(format!("0.0.0.0:{}", 4000)).await.unwrap();
+                sock.connect(format!("{}:{}", env::var("INTERCOM_ADDRESS").unwrap(), 4000))
+                    .await
+                    .unwrap();
                 Arc::new(sock)
             },
             payload_type: 111,
@@ -486,6 +500,7 @@ async fn start_audio_rtc(req: WebSocketRequest, client: &mut Client) {
         println!("generate local_description failed!");
     }
 }
+
 async fn client_msg(
     client_id: &str,
     msg: Message,

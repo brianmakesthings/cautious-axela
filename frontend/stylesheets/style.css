@@ -19,12 +19,21 @@ body {
   color: #fd6261;
 }
 
-.title {
-  padding: 20px 50px 0 50px;
+body,
+body > div,
+body > div > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 1em;
 }
 
-.intercom-controls {
-  padding: 20px 50px;
+body {
+  gap: 1em;
+}
+
+body > div > div {
+  gap: 0.5em;
 }
 
 h2 {
@@ -33,12 +42,11 @@ h2 {
 
 input {
   color: rgb(163, 160, 160);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.4);
   background-color: transparent;
-  cursor: pointer;
 }
 
-.intercom-controls > button {
+.intercom-controls button {
   color: rgb(163, 160, 160);
   border: none;
   background: none;
@@ -46,11 +54,11 @@ input {
   font-size: large;
 }
 
-.intercom-controls > button:hover {
+.intercom-controls button:hover {
   color: #fd6261;
 }
 
-.intercom-controls > button {
+.intercom-controls button {
   color: rgb(163, 160, 160);
   border: none;
   background: none;
@@ -58,13 +66,12 @@ input {
   font-size: large;
 }
 
-.intercom-controls > button:hover {
+.intercom-controls button:hover {
   color: #fd6261;
 }
 
 #add_card {
   background-color: rgb(210, 206, 206);
   color: #131517;
-  min-height:25px;
+  min-height: 25px;
 }
-
