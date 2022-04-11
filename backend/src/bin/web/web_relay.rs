@@ -73,7 +73,7 @@ impl Commands {
                     PhantomData,
                 )),
                 id,
-            }
+            ),
             Commands::KeypadGetCode => (
                 Requests::KeyPadGetCode(BasicGetRequest::<KeyPad, Code>(
                     ID(id),
@@ -100,7 +100,7 @@ impl Commands {
                     )),
                     id,
                 )
-            }
+            },
             _ => (
                 Requests::TerminalSetText(BasicSetRequest::<Terminal, Text>(
                     ID(id),
