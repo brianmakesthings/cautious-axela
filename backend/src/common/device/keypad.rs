@@ -362,7 +362,7 @@ impl Set<KeyPad, PhoneNumberText> for KeyPad {
     }
 }
 
-async fn send_notification(to: &str) {
+async fn send_notification(to: String) {
     let account_sid = env::var("TWILIO_ACCOUNT_SID").expect("Failed to parse Account SID");
     let api_key = env::var("TWILIO_API_KEY").expect("Failed to parse API Key");
     let api_key_secret = env::var("TWILIO_API_KEY_SECRET").expect("Failed to parse API Key Secret");
